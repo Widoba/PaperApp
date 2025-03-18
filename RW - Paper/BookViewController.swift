@@ -139,6 +139,39 @@ class BookViewController: UICollectionViewController {
     override var prefersStatusBarHidden: Bool {
         return false
     }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Force view to use full screen bounds
+        let fullScreenBounds = UIScreen.main.bounds
+        view.frame = fullScreenBounds
+        
+        // Force background color
+        view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        view.superview?.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        
+        // Hide navigation bar completely
+        navigationController?.setNavigationBarHidden(true, animated: false)
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        // Set collection view frame to window bounds, not view bounds
+        if let window = UIApplication.shared.windows.first {
+            let fullScreenBounds = window.bounds
+            collectionView.frame = fullScreenBounds
+        } else {
+            collectionView.frame = UIScreen.main.bounds
+        }
+        
+        // Make sure content insets are zero
+        collectionView.contentInset = .zero
+        
+        // Force layout update
+        collectionViewLayout.invalidateLayout()
+    }
 }
 
 // MARK: UICollectionViewDataSource

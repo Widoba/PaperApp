@@ -13,6 +13,42 @@ class CustomNavigationViewController: UINavigationController, UINavigationContro
     override func viewDidLoad() {
         super.viewDidLoad()
         delegate = self
+        
+        // Set up navigation controller for full screen display
+        configureForFullScreen()
+    }
+    
+    private func configureForFullScreen() {
+        // Disable automatic adjustments
+        navigationBar.isTranslucent = false
+        
+        // Set full screen appearance
+        setNavigationBarHidden(true, animated: false)
+        
+        // Ensure background color matches app's background
+        view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        
+        // Force the view to use full screen bounds
+        view.frame = UIScreen.main.bounds
+        
+        // Ensure we don't respect safe area insets
+        if #available(iOS 11.0, *) {
+            additionalSafeAreaInsets = UIEdgeInsets.zero
+        }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Always hide the navigation bar
+        setNavigationBarHidden(true, animated: false)
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        // Force frame to use full screen bounds
+        view.frame = UIScreen.main.bounds
     }
 
     func navigationController(_ navigationController: UINavigationController, animationControllerFor operation: UINavigationController.Operation, from fromVC: UIViewController, to toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
