@@ -27,40 +27,89 @@ class BookViewController: UICollectionViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        // Set background color for the entire view
+        view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        collectionView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        
+        setupEdgeToEdgeLayout()
+        
         // Register for orientation change notifications
-        NotificationCenter.default.addObserver(self, selector: #selector(orientationDidChange), name: UIDevice.orientationDidChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(orientationDidChange),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
+    }
+    
+    private func setupEdgeToEdgeLayout() {
+        // Extend layout under bars and safe areas
+        edgesForExtendedLayout = .all
+        extendedLayoutIncludesOpaqueBars = true
+        
+        // Set status bar appearance to ensure proper extension
+        setNeedsStatusBarAppearanceUpdate()
+        
+        // Make sure window background color matches view
+        if let window = UIApplication.shared.windows.first {
+            window.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        }
+        
+        // Ensure collection view extends to edges
+        if #available(iOS 11.0, *) {
+            collectionView.contentInsetAdjustmentBehavior = .never
+            view.insetsLayoutMarginsFromSafeArea = false
+            collectionView.insetsLayoutMarginsFromSafeArea = false
+        } else {
+            automaticallyAdjustsScrollViewInsets = false
+        }
+        
+        // Hide navigation bar to maximize space
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        
+        // Make sure collection view uses full bounds
+        view.layoutIfNeeded()
+        collectionView.frame = UIScreen.main.bounds // Use screen bounds instead of view bounds
+        
+        // Remove any additional insets
+        collectionView.contentInset = UIEdgeInsets.zero
+        collectionView.scrollIndicatorInsets = UIEdgeInsets.zero
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
     
-    // Handle orientation changes
+    // Update layout when orientation changes
     @objc func orientationDidChange() {
-        // Calculate which page we're currently viewing
-        let currentPage: Int
-        if let collectionView = collectionView, collectionView.bounds.width > 0 {
-            currentPage = Int(round(collectionView.contentOffset.x / collectionView.bounds.width))
-        } else {
-            currentPage = 0
-        }
+        // Calculate current page based on content offset and item size
+        let currentPage = Int(round(collectionView.contentOffset.x / collectionView.bounds.width))
         
-        // First, let the layout update
+        // Re-setup edge-to-edge layout
+        setupEdgeToEdgeLayout()
+        
+        // Force layout update
         collectionViewLayout.invalidateLayout()
         
-        // Use a more controlled approach to update the collection view
-        collectionView?.performBatchUpdates({
-            // This will recalculate all layout information
-            self.collectionView?.collectionViewLayout.invalidateLayout()
-        }, completion: { _ in
-            // After update, scroll to the same page (without animation to prevent jumps)
-            if let collectionView = self.collectionView, collectionView.bounds.width > 0 {
-                let targetX = CGFloat(currentPage) * collectionView.bounds.width
-                // Use a safer approach that works even if contentSize has changed
-                let safeX = min(targetX, max(0, collectionView.contentSize.width - collectionView.bounds.width))
-                collectionView.setContentOffset(CGPoint(x: safeX, y: 0), animated: false)
-            }
-        })
+        // Wait for layout to update with correct dimensions
+        DispatchQueue.main.async {
+            // Calculate the offset for the same page
+            let pageOffset = CGFloat(currentPage) * self.collectionView.bounds.width
+            let safeOffset = min(pageOffset, self.collectionView.contentSize.width - self.collectionView.bounds.width)
+            let finalOffset = max(0, safeOffset)
+            
+            // Set the content offset to maintain the same page
+            self.collectionView.setContentOffset(CGPoint(x: finalOffset, y: 0), animated: false)
+        }
+    }
+    
+    // Add status bar style control
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+    
+    override var prefersStatusBarHidden: Bool {
+        return false
     }
 }
 

@@ -34,6 +34,13 @@ class BooksViewController: UICollectionViewController {
         
         // Register for orientation change notifications
         NotificationCenter.default.addObserver(self, selector: #selector(orientationDidChange), name: UIDevice.orientationDidChangeNotification, object: nil)
+        
+        // Set background color for the entire view
+        view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        collectionView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        
+        // Set up edge-to-edge layout
+        setupEdgeToEdgeLayout()
     }
     
     deinit {
@@ -42,46 +49,20 @@ class BooksViewController: UICollectionViewController {
     
     // Handle orientation changes
     @objc func orientationDidChange() {
-        // Store the current content offset ratio before layout changes
-        let currentOffsetRatio: CGFloat
-        if let collectionView = collectionView, collectionView.contentSize.width > 0 {
-            currentOffsetRatio = collectionView.contentOffset.x / collectionView.contentSize.width
-        } else {
-            currentOffsetRatio = 0
-        }
+        // Store current position
+        let currentOffsetRatio: CGFloat = collectionView.contentOffset.x / max(collectionView.contentSize.width, 1)
         
-        // Save the current centered book
-        let currentBook = selectedCell()
+        // Re-setup edge-to-edge layout
+        setupEdgeToEdgeLayout()
         
-        // Force layout update - need to explicitly update the flow layout
-        if let layout = collectionViewLayout as? UICollectionViewFlowLayout {
-            // Update item size for the new orientation
-            let screenWidth = UIScreen.main.bounds.width
-            let screenHeight = UIScreen.main.bounds.height
-            let isPortrait = screenHeight > screenWidth
-            
-            // Recalculate content insets for new orientation
-            if let layout = collectionViewLayout as? BooksLayout {
-                collectionView?.performBatchUpdates({
-                    // This triggers layout recalculation
-                    layout.invalidateLayout()
-                }, completion: { _ in
-                    // After layout is updated, restore position
-                    if let currentBook = currentBook, let indexPath = self.collectionView?.indexPath(for: currentBook) {
-                        // Scroll to the previously selected book
-                        self.collectionView?.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: false)
-                    }
-                })
-            }
-        } else {
-            // Fallback to simple invalidation
-            collectionViewLayout.invalidateLayout()
-            collectionView?.reloadData()
-            
-            // Try to maintain the same position after reload
-            if let currentBook = currentBook, let indexPath = self.collectionView?.indexPath(for: currentBook) {
-                self.collectionView?.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: false)
-            }
+        // Force layout update
+        collectionViewLayout.invalidateLayout()
+        
+        // Wait for layout to update and then restore position
+        DispatchQueue.main.async {
+            // Calculate new offset after layout update
+            let newOffsetX = currentOffsetRatio * self.collectionView.contentSize.width
+            self.collectionView.setContentOffset(CGPoint(x: newOffsetX, y: 0), animated: false)
         }
     }
     
@@ -168,6 +149,49 @@ class BooksViewController: UICollectionViewController {
     override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let book = books?[indexPath.row]
         openBook(book: book)
+    }
+    
+    private func setupEdgeToEdgeLayout() {
+        // Extend layout under bars and safe areas
+        edgesForExtendedLayout = .all
+        extendedLayoutIncludesOpaqueBars = true
+        
+        // Set status bar appearance to ensure proper extension
+        setNeedsStatusBarAppearanceUpdate()
+        
+        // Make sure window background color matches view
+        if let window = UIApplication.shared.windows.first {
+            window.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        }
+        
+        // Ensure collection view extends to edges
+        if #available(iOS 11.0, *) {
+            collectionView.contentInsetAdjustmentBehavior = .never
+            view.insetsLayoutMarginsFromSafeArea = false
+            collectionView.insetsLayoutMarginsFromSafeArea = false
+        } else {
+            automaticallyAdjustsScrollViewInsets = false
+        }
+        
+        // Hide navigation bar to maximize space
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        
+        // Make sure collection view uses full bounds
+        view.layoutIfNeeded()
+        collectionView.frame = UIScreen.main.bounds // Use screen bounds instead of view bounds
+        
+        // Remove any additional insets
+        collectionView.contentInset = UIEdgeInsets.zero
+        collectionView.scrollIndicatorInsets = UIEdgeInsets.zero
+    }
+    
+    // Add status bar style control
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+    
+    override var prefersStatusBarHidden: Bool {
+        return false
     }
 }
 
