@@ -42,15 +42,45 @@ class BooksViewController: UICollectionViewController {
     
     // Handle orientation changes
     @objc func orientationDidChange() {
-        // Force layout update
-        collectionViewLayout.invalidateLayout()
-        collectionView?.reloadData()
+        // Store the current content offset ratio before layout changes
+        let currentOffsetRatio: CGFloat
+        if let collectionView = collectionView, collectionView.contentSize.width > 0 {
+            currentOffsetRatio = collectionView.contentOffset.x / collectionView.contentSize.width
+        } else {
+            currentOffsetRatio = 0
+        }
         
-        // Make sure we're still centered on the current book
-        if let currentCell = selectedCell() {
-            if let indexPath = collectionView?.indexPath(for: currentCell) {
-                // Scroll to the current book with animation
-                collectionView?.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
+        // Save the current centered book
+        let currentBook = selectedCell()
+        
+        // Force layout update - need to explicitly update the flow layout
+        if let layout = collectionViewLayout as? UICollectionViewFlowLayout {
+            // Update item size for the new orientation
+            let screenWidth = UIScreen.main.bounds.width
+            let screenHeight = UIScreen.main.bounds.height
+            let isPortrait = screenHeight > screenWidth
+            
+            // Recalculate content insets for new orientation
+            if let layout = collectionViewLayout as? BooksLayout {
+                collectionView?.performBatchUpdates({
+                    // This triggers layout recalculation
+                    layout.invalidateLayout()
+                }, completion: { _ in
+                    // After layout is updated, restore position
+                    if let currentBook = currentBook, let indexPath = self.collectionView?.indexPath(for: currentBook) {
+                        // Scroll to the previously selected book
+                        self.collectionView?.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: false)
+                    }
+                })
+            }
+        } else {
+            // Fallback to simple invalidation
+            collectionViewLayout.invalidateLayout()
+            collectionView?.reloadData()
+            
+            // Try to maintain the same position after reload
+            if let currentBook = currentBook, let indexPath = self.collectionView?.indexPath(for: currentBook) {
+                self.collectionView?.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: false)
             }
         }
     }

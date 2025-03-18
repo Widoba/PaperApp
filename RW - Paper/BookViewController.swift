@@ -37,14 +37,30 @@ class BookViewController: UICollectionViewController {
     
     // Handle orientation changes
     @objc func orientationDidChange() {
-        // Force layout update
-        collectionViewLayout.invalidateLayout()
-        collectionView?.reloadData()
+        // Calculate which page we're currently viewing
+        let currentPage: Int
+        if let collectionView = collectionView, collectionView.bounds.width > 0 {
+            currentPage = Int(round(collectionView.contentOffset.x / collectionView.bounds.width))
+        } else {
+            currentPage = 0
+        }
         
-        // Preserve current page position
-        let currentPage = Int(collectionView!.contentOffset.x / collectionView!.bounds.width)
-        let newOffset = CGFloat(currentPage) * collectionView!.bounds.width
-        collectionView?.contentOffset = CGPoint(x: newOffset, y: 0)
+        // First, let the layout update
+        collectionViewLayout.invalidateLayout()
+        
+        // Use a more controlled approach to update the collection view
+        collectionView?.performBatchUpdates({
+            // This will recalculate all layout information
+            self.collectionView?.collectionViewLayout.invalidateLayout()
+        }, completion: { _ in
+            // After update, scroll to the same page (without animation to prevent jumps)
+            if let collectionView = self.collectionView, collectionView.bounds.width > 0 {
+                let targetX = CGFloat(currentPage) * collectionView.bounds.width
+                // Use a safer approach that works even if contentSize has changed
+                let safeX = min(targetX, max(0, collectionView.contentSize.width - collectionView.bounds.width))
+                collectionView.setContentOffset(CGPoint(x: safeX, y: 0), animated: false)
+            }
+        })
     }
 }
 

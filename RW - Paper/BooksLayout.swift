@@ -17,26 +17,46 @@ class BooksLayout: UICollectionViewFlowLayout {
     private var pageWidth: CGFloat {
         let screenWidth = UIScreen.main.bounds.width
         let screenHeight = UIScreen.main.bounds.height
-        let baseSize = min(screenWidth, screenHeight)
         
-        // For iPad-sized devices, use a ratio that maintains the original look
-        if baseSize >= 768 { // iPad mini or larger
-            return 362
-        } else { // iPhone or smaller iPad
-            return baseSize * 0.6 // 60% of the shorter dimension
+        // Determine if we're in portrait or landscape
+        let isPortrait = screenHeight > screenWidth
+        
+        // iPad-sized devices
+        if screenWidth >= 768 || screenHeight >= 768 {
+            return isPortrait ? 320 : 362  // Slightly smaller in portrait
+        } else {
+            // iPhone
+            // In portrait, use a larger percentage of screen width
+            if isPortrait {
+                return screenWidth * 0.85 // Use 85% of screen width in portrait
+            } else {
+                return screenWidth * 0.6  // Use 60% in landscape
+            }
         }
     }
     
     private var pageHeight: CGFloat {
         let screenWidth = UIScreen.main.bounds.width
         let screenHeight = UIScreen.main.bounds.height
-        let baseSize = min(screenWidth, screenHeight)
         
-        // For iPad-sized devices, use a ratio that maintains the original look
-        if baseSize >= 768 { // iPad mini or larger
-            return 568
-        } else { // iPhone or smaller iPad
-            return baseSize * 0.94 // Maintain the aspect ratio (568/362 ≈ 1.57)
+        // Determine if we're in portrait or landscape
+        let isPortrait = screenHeight > screenWidth
+        
+        // iPad-sized devices
+        if screenWidth >= 768 || screenHeight >= 768 {
+            return isPortrait ? 500 : 568  // Keep proportional to width
+        } else {
+            // iPhone
+            // Maintain aspect ratio (568/362 ≈ 1.57)
+            let aspectRatio: CGFloat = 1.57
+            
+            if isPortrait {
+                // In portrait, make sure it fits on screen with margins
+                return min(pageWidth * aspectRatio, screenHeight * 0.85)
+            } else {
+                // In landscape, keep the original aspect ratio
+                return pageWidth * aspectRatio
+            }
         }
     }
 
