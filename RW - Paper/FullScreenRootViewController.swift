@@ -28,139 +28,50 @@ class FullScreenRootViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        print("FullScreenRootViewController - viewDidLoad")
-        print("FullScreenRootViewController - Screen bounds: \(UIScreen.main.bounds)")
-        print("FullScreenRootViewController - Initial view frame: \(view.frame)")
+        // Set up the view
+        view.backgroundColor = backgroundColor
         
-        // Make sure we're using the full screen size
-        view.frame = UIScreen.main.bounds
-        
-        // Set the background color to be clearly visible
-        view.backgroundColor = UIColor.purple
-        
-        // Add the content view controller
+        // Add the content view controller using proper containment
         if let contentVC = contentViewController {
-            print("FullScreenRootViewController - Adding content view controller: \(type(of: contentVC))")
-            
-            // Basic containment pattern
+            // Add as child view controller
             addChild(contentVC)
+            
+            // Add the content view to our view
             view.addSubview(contentVC.view)
             
-            // Use frame-based approach to fill the full screen
-            contentVC.view.frame = UIScreen.main.bounds
-            contentVC.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            // Set up Auto Layout constraints
+            contentVC.view.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                contentVC.view.topAnchor.constraint(equalTo: view.topAnchor),
+                contentVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                contentVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                contentVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            ])
             
-            print("FullScreenRootViewController - Content view frame after setup: \(contentVC.view.frame)")
-            
+            // Notify child it's now in our view hierarchy
             contentVC.didMove(toParent: self)
             
-            // Force a layout update
-            view.setNeedsLayout()
-            view.layoutIfNeeded()
-            
-            print("FullScreenRootViewController - After layout, content view frame: \(contentVC.view.frame)")
-        } else {
-            print("FullScreenRootViewController - ERROR: No content view controller provided!")
+            print("FullScreenRootViewController - Content view controller added: \(type(of: contentVC))")
         }
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        print("FullScreenRootViewController - viewWillAppear, view frame: \(view.frame)")
-    }
+    // MARK: - Status Bar Appearance
     
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        print("FullScreenRootViewController - viewDidAppear, view frame: \(view.frame)")
-        print("FullScreenRootViewController - Content view frame: \(contentViewController?.view.frame ?? .zero)")
-    }
-    
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        
-        // Make sure our view fills the entire screen
-        if let window = view.window {
-            view.frame = window.bounds
-        }
-    }
-    
-    // Force status bar settings
     override var prefersStatusBarHidden: Bool {
-        return false
+        return contentViewController?.prefersStatusBarHidden ?? false
     }
     
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .lightContent
+        return contentViewController?.preferredStatusBarStyle ?? .default
     }
     
-    // Disable safe area insets
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        
-        // Only proceed if view is loaded and in window hierarchy
-        guard isViewLoaded && view.window != nil else { return }
-        
-        if #available(iOS 11.0, *) {
-            // Check if safe area insets are valid before trying to counter them
-            let insets = view.safeAreaInsets
-            if insets != .zero {
-                // Set additional insets to zero to counter any system-added insets
-                additionalSafeAreaInsets = UIEdgeInsets(
-                    top: -insets.top,
-                    left: -insets.left,
-                    bottom: -insets.bottom,
-                    right: -insets.right
-                )
-            }
-        }
-    }
+    // MARK: - Orientation Support
     
-    // Forward all unhandled messages to the content view controller
-    override func responds(to aSelector: Selector!) -> Bool {
-        if super.responds(to: aSelector) {
-            return true
-        }
-        
-        return contentViewController?.responds(to: aSelector) ?? false
-    }
-    
-    override func forwardingTarget(for aSelector: Selector!) -> Any? {
-        if super.responds(to: aSelector) {
-            return self
-        }
-        
-        return contentViewController
-    }
-    
-    // Handle navigation controller delegation properly
-    override var childForStatusBarStyle: UIViewController? {
-        return contentViewController
-    }
-    
-    override var childForStatusBarHidden: UIViewController? {
-        return contentViewController
-    }
-    
-    // Allow rotation to propagate to content view controller
     override var shouldAutorotate: Bool {
         return contentViewController?.shouldAutorotate ?? super.shouldAutorotate
     }
     
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return contentViewController?.supportedInterfaceOrientations ?? super.supportedInterfaceOrientations
-    }
-    
-    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
-        return contentViewController?.preferredInterfaceOrientationForPresentation ?? super.preferredInterfaceOrientationForPresentation
-    }
-    
-    // Make sure we don't break the navigation
-    override func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
-        // If we have a content view controller that's a navigation controller, let it handle the presentation
-        if contentViewController is UINavigationController {
-            contentViewController?.present(viewControllerToPresent, animated: flag, completion: completion)
-        } else {
-            super.present(viewControllerToPresent, animated: flag, completion: completion)
-        }
     }
 } 

@@ -42,8 +42,6 @@ class BookViewController: UICollectionViewController {
             object: nil
         )
         
-        self.pages = book.pages
-        
         // Set background color
         view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
         collectionView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
@@ -57,9 +55,6 @@ class BookViewController: UICollectionViewController {
         // Extend layout under bars and safe areas
         edgesForExtendedLayout = .all
         extendedLayoutIncludesOpaqueBars = true
-        
-        // Set view to use full screen bounds
-        view.frame = UIScreen.main.bounds
         
         // Disable safe area adjustments
         if #available(iOS 11.0, *) {
@@ -75,11 +70,27 @@ class BookViewController: UICollectionViewController {
         // Hide the navigation bar
         navigationController?.setNavigationBarHidden(true, animated: false)
         
-        // Ensure collection view fills the screen
-        collectionView.frame = UIScreen.main.bounds
+        // IMPORTANT: Don't mix frame and auto layout approaches
+        // We'll use just auto layout here
+        
+        // Set translatesAutoresizingMaskIntoConstraints to false for auto layout
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Remove any existing constraints first to avoid conflicts
+        let existingConstraints = view.constraints.filter {
+            ($0.firstItem === collectionView || $0.secondItem === collectionView)
+        }
+        view.removeConstraints(existingConstraints)
+        
+        // Add constraints to make collection view fill the entire view
+        NSLayoutConstraint.activate([
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
         
         print("BookViewController - After setupEdgeToEdgeLayout, view frame: \(view.frame)")
-        print("BookViewController - CollectionView frame: \(collectionView.frame)")
     }
     
     deinit {
@@ -121,11 +132,14 @@ class BookViewController: UICollectionViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Force edge-to-edge layout
-        view.frame = UIScreen.main.bounds
-        collectionView.frame = UIScreen.main.bounds
+        // Force background color
+        view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        collectionView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
         
-        print("BookViewController - viewWillAppear frame: \(view.frame)")
+        // Hide navigation bar completely
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        
+        print("BookViewController - viewWillAppear")
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -137,19 +151,13 @@ class BookViewController: UICollectionViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
-        // Set collection view frame to window bounds, not view bounds
-        if let window = UIApplication.shared.windows.first {
-            let fullScreenBounds = window.bounds
-            collectionView.frame = fullScreenBounds
-        } else {
-            collectionView.frame = UIScreen.main.bounds
-        }
-        
         // Make sure content insets are zero
         collectionView.contentInset = .zero
         
         // Force layout update
         collectionViewLayout.invalidateLayout()
+        
+        print("BookViewController - viewDidLayoutSubviews, collection view frame: \(collectionView.frame)")
     }
 }
 
@@ -162,24 +170,53 @@ extension BookViewController {
     }
     
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        if let book = book {
-            return book.numberOfPages() + 1
+        // Add safeguard for nil book
+        guard let book = book else {
+            print("BookViewController - Warning: book is nil in numberOfItemsInSection")
+            return 0
         }
-        return 0
+        
+        // Add bounds check and safeguard
+        let count = book.numberOfPages() + 1
+        print("BookViewController - Number of items: \(count)")
+        return count
     }
     
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        print("BookViewController - cellForItemAt called for indexPath: \(indexPath)")
+        
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BookPageCell", for: indexPath) as! BookPageCell
         
+        // Add safeguards around book access
+        guard let book = self.book else {
+            print("BookViewController - Warning: book is nil in cellForItemAt")
+            // Configure cell with placeholder or empty state
+            cell.textLabel.text = "Error"
+            cell.image = nil
+            return cell
+        }
+        
+        // Log book information for debugging
+        print("BookViewController - Book has \(book.numberOfPages()) pages")
+        
+        // Add bounds checking
         if indexPath.row == 0 {
             // Cover page
+            print("BookViewController - Configuring cover page cell")
             cell.textLabel.text = nil
-            cell.image = book?.coverImage()
+            cell.image = book.coverImage()
+        }
+        else if indexPath.row <= book.numberOfPages() {
+            // Page with index: indexPath.row - 1
+            print("BookViewController - Configuring page \(indexPath.row) cell")
+            cell.textLabel.text = "\(indexPath.row)"
+            cell.image = book.pageImage(index: indexPath.row - 1)
         }
         else {
-            // Page with index: indexPath.row - 1
-            cell.textLabel.text = "\(indexPath.row)"
-            cell.image = book?.pageImage(index: indexPath.row - 1)
+            // Handle out of bounds index
+            print("BookViewController - Warning: Index out of bounds: \(indexPath.row)")
+            cell.textLabel.text = "Error"
+            cell.image = nil
         }
         
         return cell

@@ -14,56 +14,74 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        print("AppDelegate - application didFinishLaunchingWithOptions")
+        
+        // Create a fresh window with the correct size
+        window = UIWindow(frame: UIScreen.main.bounds)
         
         // Set the window background color
         window?.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
         
-        // Configure full-screen presentation
-        // Note: Status bar appearance is now controlled via view controllers, not globally
-        // The deprecated call has been removed
-        
-        // Make sure we have a proper scene configuration
-        if let window = self.window {
-            // Ensure window fills the screen
-            window.frame = UIScreen.main.bounds
-            print("AppDelegate - Window size: \(window.frame.size)")
-            
-            // Handle our custom root view controller setup
-            setupRootViewControllerDirectly(for: window)
-            
-            window.makeKeyAndVisible()
-            
-            // Print final window configuration
-            print("AppDelegate - Final window config - root: \(type(of: window.rootViewController))")
+        // Set up the root view controller from storyboard
+        if setupRootViewController() {
+            // Make the window visible
+            window?.makeKeyAndVisible()
+            print("AppDelegate - Window made key and visible")
+        } else {
+            print("AppDelegate - ERROR: Failed to set up root view controller")
         }
         
         return true
     }
     
-    private func setupRootViewControllerDirectly(for window: UIWindow) {
-        // Get the storyboard (use Main.storyboard)
+    private func setupRootViewController() -> Bool {
+        // Get the main storyboard
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        print("AppDelegate - Loaded Main.storyboard")
         
-        // Get the initial view controller from the storyboard
-        if let initialVC = storyboard.instantiateInitialViewController() {
-            print("AppDelegate - Created initial view controller: \(type(of: initialVC))")
+        // Initialize the initial view controller from storyboard
+        guard let initialVC = storyboard.instantiateInitialViewController() else {
+            print("AppDelegate - ERROR: Failed to load initial view controller from storyboard")
+            return false
+        }
+        
+        print("AppDelegate - Loaded initial view controller: \(type(of: initialVC))")
+        
+        // Check if it's a navigation controller and ensure its view controllers are loaded
+        if let navController = initialVC as? UINavigationController {
+            print("AppDelegate - Initial view controller is a UINavigationController")
             
-            // Force view to load
+            // Make sure the navigation controller's views and child view controllers are loaded
+            _ = navController.view
+            
+            // Print the navigation stack for debugging
+            if let rootVC = navController.viewControllers.first {
+                print("AppDelegate - Navigation controller's root view controller: \(type(of: rootVC))")
+                _ = rootVC.view // Force view loading
+            } else {
+                print("AppDelegate - WARNING: Navigation controller has no view controllers")
+            }
+            
+            // Create our container controller for the navigation controller
+            let rootVC = FullScreenRootViewController(contentViewController: navController)
+            
+            // Set as the window's root view controller
+            window?.rootViewController = rootVC
+            print("AppDelegate - Set root view controller to FullScreenRootViewController containing NavController")
+            return true
+        } else {
+            print("AppDelegate - Initial view controller is NOT a navigation controller")
+            
+            // Initialize if needed by accessing the view
             _ = initialVC.view
             
-            // Create our custom container
-            let fullScreenRootVC = FullScreenRootViewController(contentViewController: initialVC)
+            // Create our container controller for the regular view controller
+            let rootVC = FullScreenRootViewController(contentViewController: initialVC)
             
-            // Force view to load
-            _ = fullScreenRootVC.view
-            
-            // Set as root
-            window.rootViewController = fullScreenRootVC
-            
-            print("AppDelegate - Set root to FullScreenRootViewController containing \(type(of: initialVC))")
-        } else {
-            print("AppDelegate - ERROR: Could not instantiate initial view controller from storyboard")
+            // Set as the window's root view controller
+            window?.rootViewController = rootVC
+            print("AppDelegate - Set root view controller to FullScreenRootViewController")
+            return true
         }
     }
     

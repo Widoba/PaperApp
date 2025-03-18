@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5BD125EC2D89CC4C00E1F013 /* FullScreenRootViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD125EB2D89CC4C00E1F013 /* FullScreenRootViewController.swift */; };
 		9A0BA4B01A3EDD7A004FC741 /* Books.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9A0BA4AF1A3EDD7A004FC741 /* Books.plist */; };
 		9A0BA4B21A3EDF20004FC741 /* BookStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0BA4B11A3EDF20004FC741 /* BookStore.swift */; };
 		9A0BA4B41A3EDF25004FC741 /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0BA4B31A3EDF25004FC741 /* Book.swift */; };
@@ -36,6 +37,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5BD125EB2D89CC4C00E1F013 /* FullScreenRootViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = FullScreenRootViewController.swift; path = "RW - Paper/FullScreenRootViewController.swift"; sourceTree = "<group>"; };
 		9A0BA4AF1A3EDD7A004FC741 /* Books.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Books.plist; sourceTree = "<group>"; };
 		9A0BA4B11A3EDF20004FC741 /* BookStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BookStore.swift; sourceTree = "<group>"; };
 		9A0BA4B31A3EDF25004FC741 /* Book.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
@@ -184,6 +186,7 @@
 		9A80C43A1A2C844B00725F32 = {
 			isa = PBXGroup;
 			children = (
+				5BD125EB2D89CC4C00E1F013 /* FullScreenRootViewController.swift */,
 				9A80C4451A2C844B00725F32 /* RW - Paper */,
 				9A80C45B1A2C844C00725F32 /* RW - PaperTests */,
 				9A80C4441A2C844B00725F32 /* Products */,
@@ -366,6 +369,7 @@
 				9A3151011A334ECE0014C868 /* BooksLayout.swift in Sources */,
 				9A80C44B1A2C844B00725F32 /* BookViewController.swift in Sources */,
 				9A80C46B1A2C875200725F32 /* BookPageCell.swift in Sources */,
+				5BD125EC2D89CC4C00E1F013 /* FullScreenRootViewController.swift in Sources */,
 				9A80C4691A2C869900725F32 /* BookLayout.swift in Sources */,
 				9A80C4491A2C844B00725F32 /* AppDelegate.swift in Sources */,
 				9A0BA4B41A3EDF25004FC741 /* Book.swift in Sources */,
@@ -442,6 +446,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -477,6 +482,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -528,6 +534,7 @@
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = "RW - PaperTests/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RW - Paper.app/RW - Paper";
@@ -543,6 +550,7 @@
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = "RW - PaperTests/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RW - Paper.app/RW - Paper";

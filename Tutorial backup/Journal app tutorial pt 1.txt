@@ -1,0 +1,715 @@
+# **Book Open Animation Tutorial - Part 2**
+
+Welcome back to our iOS book open animation tutorial series!
+
+In the first part of this tutorial series, you learned how to create two custom collection view layouts and applied shadow layers to the book's pages to create depth and realism in your app.
+
+In this final part, you'll learn to create custom navigation transitions and apply interactive gestures to open a book with a pinch gesture.
+
+Note: Full credit goes to Attila Hegedüs for creating this awesome sample project.
+
+## **Getting Started**
+
+The tutorial picks up from Part 1. If you didn't work through the last part, or want to start afresh, simply download the completed sample project from the previous tutorial.
+
+Open up the project in Xcode. Right now, when you select a book to read the open pages simply slide in from the right. This is the default transition behavior for a UINavigationController. But by the end of this tutorial, your custom transition will look like the following:
+
+The custom transition will animate the book smoothly between the closed and opened states in a natural manner that users will love.
+
+Time to get started!
+
+## **Creating your Custom Navigation Controller**
+
+To create a custom transition on a push or pop you must create a custom navigation controller and implement the UINavigationControllerDelegate protocol.
+
+Right-click (or Ctrl-click) on the App group and click New File. Select the iOS\Source\Cocoa Touch Class template and name the new file CustomNavigationController. Make sure it's a subclass of UINavigationController and set the language to Swift. Click Next and then Create.
+
+Open CustomNavigationController.swift and replace its contents with the following:
+
+```
+import UIKit
+
+class CustomNavigationController: UINavigationController, UINavigationControllerDelegate {
+
+override func viewDidLoad() {
+    super.viewDidLoad()
+    //1
+    delegate = self
+}
+
+//2
+func navigationController(navigationController: UINavigationController, animationControllerForOperation operation: UINavigationControllerOperation, fromViewController fromVC: UIViewController, toViewController toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    if operation == .Push {
+        return nil
+    }
+    if operation == .Pop {
+        return nil
+    }
+
+    return nil
+}
+}
+```
+
+Here's what you're doing in the code above:
+
+1. In viewDidLoad you set the navigation controller as its own delegate.
+2. navigationController(_:animationControllerForOperation:fromViewController:toViewController:) is one of the methods you can implement for UINavigationControllerDelegate. This method executes each time you push or pop between view controllers, and you control which animated transition you return from this method. The code currently returns nil which defaults to the standard transition. You'll replace it with your own custom transition object shortly.
+
+Now that you have your custom navigation controller set up, it's time to replace the default navigation controller in storyboard.
+
+Open Main.storyboard and click Navigation Controller in the storyboard's view hierarchy on the left. Next, click the Identity Inspector and under Custom Class, change UINavigationController to CustomNavigationController, as shown below:
+
+Build and run to ensure everything still works; nothing will have changed since you're returning nil in your delegate method, which defaults to the navigation controller's standard transition.
+
+## **Creating the Custom Transition**
+
+Time for the fun part — building your custom transition object! :]
+
+With a custom transition object, the class you create must conform to the UIViewControllerAnimatedTransitioning protocol, and in particular, the methods below:
+
+- transitionDuration: Required. Returns the duration of the animation and synchronizes interactive transitions.
+- animateTransition: Required. Provides the to and from controllers you're transitioning between. Most of the heavy lifting will be done in this method.
+- animationEnded: Optional. Informs you when the transition has finished. You can perform any required cleanup in this method.
+
+### **Setting up Your Transition**
+
+Right-click (or Ctrl-click) on the App group and click New File. Select the iOS\Source\Cocoa Touch Class template and name the new file BookOpeningTransition. Make sure it's a subclass of NSObject and set the language to Swift. Click Next and then Create.
+
+Open BookOpeningTransition.swift and replace its contents with the following:
+
+```
+import UIKit
+
+//1
+class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
+
+    // MARK: Stored properties
+    var transforms = [UICollectionViewCell: CATransform3D]() //2
+    var toViewBackgroundColor: UIColor? //3
+    var isPush = true //4
+
+    //5
+    // MARK: UIViewControllerAnimatedTransitioning
+    func transitionDuration(transitionContext: UIViewControllerContextTransitioning) -> NSTimeInterval {
+        return 1
+    }
+
+    func animateTransition(transitionContext: UIViewControllerContextTransitioning) {
+
+    }
+}
+```
+
+Taking each commented section in turn:
+
+1. BookOpeningTransition implements the required methods for the UIViewControllerAnimatedTransitioning protocol.
+2. The dictionary transforms stores key value pairs, where the key is a UICollectionViewCell and the value is of type CATransform3D. This dictionary tracks each cell's page transform when the book is open.
+3. This defines the color you transition to, which helps the fade look much cleaner.
+4. The boolean isPush determines whether the transition is a push, or a pop,
+5. Here you add the required methods for UIViewControllerAnimatedTransitioning to avoid build errors; you'll implement these methods shortly.
+
+Now that you have your variables set up, it's time to implement the protocol methods.
+
+Replace the contents of transitionDuration(_:) with the following:
+
+```
+if isPush {
+    return 1
+} else {
+    return 1
+}
+```
+
+transitionDuration(_:) returns the duration of the transition animation. In this case, you want it to take 1 second on either a push or a pop. Writing the method this way lets you easily change the timing of the push or pop.
+
+Next, you need to implement the second required protocol method — animateTransition — where the magic will happen! :] You'll implement this in two parts:
+
+1. Implement the helper methods to set up animateTransition for a push.
+2. Implement the helper methods to set up animateTransition for a pop.
+
+## **Creating the Push Transition**
+
+Imagine yourself opening a book in real life:
+
+Although it looks complicated, you only need to consider the two states of your animation and let UIView's method animateWithDuration handle the animation between the following two states:
+
+- Stage 1 is when the book is closed.
+- Stage 2 is when the book is open; this is essentially the transform you created in Part 1 of this tutorial.
+
+First, you'll implement some helper methods to handle the two states before you implement the animateTransition(_:) protocol method.
+
+Still in BookOpeningTransition.swift, add the following code to the end of the class:
+
+```
+// MARK: Helper Methods
+func makePerspectiveTransform() -> CATransform3D {
+    var transform = CATransform3DIdentity
+    transform.m34 = 1.0 / -2000
+    return transform
+}
+```
+
+This code returns a transform and adds perspective in the z-axis. You'll use this later to help transform your views during the animation.
+
+### **State 1 – Closed Book**
+
+Next, add the following code just after makePerspectiveTransform:
+
+```
+func closePageCell(cell : BookPageCell) {
+    // 1
+    var transform = self.makePerspectiveTransform()
+    // 2
+    if cell.layer.anchorPoint.x == 0 {
+        // 3
+        transform = CATransform3DRotate(transform, CGFloat(0), 0, 1, 0)
+        // 4
+        transform = CATransform3DTranslate(transform, -0.7 * cell.layer.bounds.width / 2, 0, 0)
+        // 5
+        transform = CATransform3DScale(transform, 0.7, 0.7, 1)
+    }
+    // 6
+    else {
+        // 7
+        transform = CATransform3DRotate(transform, CGFloat(-M_PI), 0, 1, 0)
+        // 8
+        transform = CATransform3DTranslate(transform, 0.7 * cell.layer.bounds.width / 2, 0, 0)
+        // 9
+        transform = CATransform3DScale(transform, 0.7, 0.7, 1)
+    }
+    //10
+    cell.layer.transform = transform
+}
+```
+
+Recall that the BookViewController is a collection view of pages. You transformed every page to align to the book's spine, and rotated it on an axis to achieve the page flipping effect. Initially, you want the book to be closed. This method transitions every cell (or page) to be flat and fit behind the book's cover.
+
+Here's a quick illustration of the transform:
+
+Here's an explanation of the code that makes that happen:
+
+1. Initialize a new transform using the helper method you created earlier.
+2. Check that the cell is a right-hand page.
+3. If it's a right-hand page, set its angle to 0 to make it flat.
+4. Shift the page be centered behind the cover.
+5. Scale the page on the x and y axes by 0.7. Recall that you scaled the book covers to 0.7 in the previous tutorial, in case you wondered where this magic number came from.
+6. If the cell isn't a right-hand page, then it must be a left-hand page.
+7. Set the left-hand page's angle to 180. Since you want the page to be flat, you need to flip it over to the right side of the spine.
+8. Shift the page to be centered behind the cover.
+9. Scale the pages back to 0.7.
+10. Finally, set the cell's transform.
+
+Now add the following method below the one you added above:
+
+```
+func setStartPositionForPush(fromVC: BooksViewController, toVC: BookViewController) {
+    // 1
+    toViewBackgroundColor = fromVC.collectionView?.backgroundColor
+    toVC.collectionView?.backgroundColor = nil
+    //2
+    fromVC.selectedCell()?.alpha = 0
+    //3
+    for cell in toVC.collectionView!.visibleCells() as! [BookPageCell] {
+        //4
+        transforms[cell] = cell.layer.transform
+        //5
+        closePageCell(cell)
+        cell.updateShadowLayer()
+        //6
+        if let indexPath = toVC.collectionView?.indexPathForCell(cell) {
+            if indexPath.row == 0 {
+                cell.shadowLayer.opacity = 0
+            }
+        }
+    }
+}
+```
+
+setStartPositionForPush(_:toVC:) sets up stage 1 of the transition. It takes in two view controllers to animate:
+
+- fromVC, of type BooksViewController, lets you scroll through your list of books.
+- toVC, of type BookViewController, lets you flip through the pages of the book you selected.
+
+Here's what's going on in the code above:
+
+1. Store the background color of BooksViewController's collection view and set BookViewController's collection view background to nil.
+2. Hide the selected book cover. toVC will now handle the display of the cover image.
+3. Loop through the pages of the book.
+4. Save the current transform of each page in its opened state.
+5. Since the book starts from a closed state, you transform the pages to closed and update the shadow layer.
+6. Finally, ignore the shadow of the cover image.
+
+### **State 2 – Opened Book**
+
+Now that you've finished state 1 of the transitions, you can move on to state 2, where you go from a closed book to an opened book.
+
+Add the following method below setStartPositionForPush(_:toVC:)):
+
+```
+func setEndPositionForPush(fromVC: BooksViewController, toVC: BookViewController) {
+    //1
+    for cell in fromVC.collectionView!.visibleCells() as! [BookCoverCell] {
+        cell.alpha = 0
+    }
+    //2
+    for cell in toVC.collectionView!.visibleCells() as! [BookPageCell] {
+        cell.layer.transform = transforms[cell]!
+        cell.updateShadowLayer(animated: true)
+    }
+}
+```
+
+Digging into the code above:
+
+1. Hide all the book covers, since you're presenting the selected book's pages.
+2. Go through the pages of the selected book in BookViewController and load the previously saved open transforms.
+
+After you push from BooksViewController to BookViewController, there's a bit of cleanup to do.
+
+Add the following method just after the one you added above:
+
+```
+func cleanupPush(fromVC: BooksViewController, toVC: BookViewController) {
+    // Add background back to pushed view controller
+    toVC.collectionView?.backgroundColor = toViewBackgroundColor
+}
+```
+
+Once the push is complete, you simply set the background color of BookViewController's collection view to the background color you saved earlier, hiding everything behind it.
+
+### **Implementing the Book Opening Transition**
+
+Now that you have your helper methods in place, you're ready to implement the push animation! Add the following code to the empty implementation of animateTransition(_:):
+
+```
+//1
+let container = transitionContext.containerView()
+//2
+if isPush {
+    //3
+    let fromVC = transitionContext.viewControllerForKey(UITransitionContextFromViewControllerKey) as! BooksViewController
+    let toVC = transitionContext.viewControllerForKey(UITransitionContextToViewControllerKey) as! BookViewController
+    //4
+    container.addSubview(toVC.view)
+
+    // Perform transition
+    //5
+    self.setStartPositionForPush(fromVC, toVC: toVC)
+
+    UIView.animateWithDuration(self.transitionDuration(transitionContext), delay: 0.0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.7, options: nil, animations: {
+        //6
+        self.setEndPositionForPush(fromVC, toVC: toVC)
+    }, completion: { finished in
+        //7
+        self.cleanupPush(fromVC, toVC: toVC)
+        //8
+        transitionContext.completeTransition(finished)
+    })
+} else {
+    //POP
+}
+```
+
+Here's what's happening in animateTransition(_:):
+
+1. Get the container view, which acts as the superview between the transitioning view controllers.
+2. Check that you're performing a push.
+3. If so, get both fromVC (BooksViewController) and toVC (BookViewController).
+4. Add toVC (the BookViewController) to the containing view.
+5. Set up the starting positions for the to and from view controllers for the closed state.
+6. Next, you animate from the starting position (Closed State) to the ending position (Opened State)
+7. Perform any cleanup.
+8. Notify the system that the transition is complete.
+
+### **Applying the Push Transition to the Navigation Controller**
+
+Now that you have your push transition set up, it's time to apply it to your custom navigation controller.
+
+Open BooksViewController.swift and add the following property just after the class declaration:
+
+```
+var transition: BookOpeningTransition?
+```
+
+This property keeps track of your transition, letting you know whether the transition is a push or pop.
+
+Next add the following extension after the ending curly brace:
+
+```
+extension BooksViewController {
+    func animationControllerForPresentController(vc: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        // 1
+        var transition = BookOpeningTransition()
+        // 2
+        transition.isPush = true
+        // 3
+        self.transition = transition
+        // 4
+        return transition
+    }
+}
+```
+
+This creates an extension to separate parts of the code's logic. In this case, you want to group methods related to transitions in one place. This method sets up the transition object and returns it as well.
+
+Taking a closer look at the code:
+
+1. Create a new transition.
+2. Since you are presenting the controller, or pushing, set isPush to true.
+3. Save the current transition.
+4. Return the transition.
+
+Now open CustomNavigationController.swift and replace the push if statement with the following:
+
+```
+if operation == .Push {
+    if let vc = fromVC as? BooksViewController {
+        return vc.animationControllerForPresentController(toVC)
+    }
+}
+```
+
+This checks that the view controller you're pushing from is a BooksViewController, and presents BookViewController with the transition you created: BookOpeningTransition.
+
+Build and run your app; click on a book of your choice and you'll see the book animate smoothly from closed to opened:
+
+Uh..how come it's not animating?
+
+It's jumping straight from a closed book to an opened book because you haven't loaded the pages' cells!
+
+The navigation controller transitions from BooksViewController to BookViewController, which are both UICollectionViewControllers. UICollectionView cells don't load on the main thread, so your code sees zero cells at the start — and thinks there's nothing to animate!
+
+You need to give the collection view enough time to load all the cells.
+
+Open BooksViewController.swift and replace openBook(_:) with the following:
+
+```
+func openBook(book: Book?) {
+    let vc = storyboard?.instantiateViewControllerWithIdentifier("BookViewController") as! BookViewController
+    vc.book = selectedCell()?.book
+    //1
+    vc.view.snapshotViewAfterScreenUpdates(true)
+    //2
+    dispatch_async(dispatch_get_main_queue(), { () -> Void in
+        self.navigationController?.pushViewController(vc, animated: true)
+        return
+    })
+}
+```
+
+Here's how you solved the problem:
+
+1. You tell BookViewController to create a snapshot after the changes have been incorporated.
+2. Make sure you push BookViewController on the main thread to give the cells time to load.
+
+Build and run your app again; you should see the book animate properly on a push:
+
+That looks much better! :]
+
+Now that you're done with the push transition, you can move on to the pop transition.
+
+## **Implementing the Pop Helper Methods**
+
+Popping the view controller is pretty much the opposite of a push. Stage 1 is now the open book state, and Stage 2 is now the closed book state:
+
+Open up BookOpeningTransition.swift and add the following code:
+
+```
+// MARK: Pop methods
+func setStartPositionForPop(fromVC: BookViewController, toVC: BooksViewController) {
+    // Remove background from the pushed view controller
+    toViewBackgroundColor = fromVC.collectionView?.backgroundColor
+    fromVC.collectionView?.backgroundColor = nil
+}
+```
+
+setStartPositionForPop(_:toVC) only stores the background color of BookViewController and removes the background color of BooksViewController's collection view. Note that you don't need to set up any cell transforms, since the book is currently in its opened state.
+
+Next, add the following code for setEndPositionForPop(_:toVC) immediately after the code you just added above:
+
+```
+func setEndPositionForPop(fromVC: BookViewController, toVC: BooksViewController) {
+    //1
+    let coverCell = toVC.selectedCell()
+    //2
+    for cell in toVC.collectionView!.visibleCells() as! [BookCoverCell] {
+        if cell != coverCell {
+            cell.alpha = 1
+        }
+    }
+    //3
+    for cell in fromVC.collectionView!.visibleCells() as! [BookPageCell] {
+        closePageCell(cell)
+    }
+}
+```
+
+This method sets up the end state of the pop transition where the book goes from opened to closed:
+
+1. Get the selected book cover.
+2. In the closed book state, loop through all the book covers in BooksViewController and fade them all back in.
+3. Loop through all the pages of the current book in BookViewController and transform the cells to a closed state.
+
+Now add the following method:
+
+```
+func cleanupPop(fromVC: BookViewController, toVC: BooksViewController) {
+    // Add background back to pushed view controller
+    fromVC.collectionView?.backgroundColor = self.toViewBackgroundColor
+    // Unhide the original book cover
+    toVC.selectedCell()?.alpha = 1
+}
+```
+
+This method performs some cleanup once the pop transition has finished. The cleanup process sets BooksViewController's collection view background to its original state and displays the original book cover.
+
+Now add the following code within the protocol method animateTransition(_:) inside the else block of the code with the //POP comment:
+
+```
+//1
+let fromVC = transitionContext.viewControllerForKey(UITransitionContextFromViewControllerKey) as! BookViewController
+let toVC = transitionContext.viewControllerForKey(UITransitionContextToViewControllerKey) as! BooksViewController
+//2
+container.insertSubview(toVC.view, belowSubview: fromVC.view)
+//3
+setStartPositionForPop(fromVC, toVC: toVC)
+UIView.animateWithDuration(self.transitionDuration(transitionContext), animations: {
+    //4
+    self.setEndPositionForPop(fromVC, toVC: toVC)
+}, completion: { finished in
+    //5
+    self.cleanupPop(fromVC, toVC: toVC)
+    //6
+    transitionContext.completeTransition(finished)
+})
+```
+
+Here's how the pop transition animation works:
+
+1. Grab the view controllers involved in the transition. fromVC is now BookViewController (the opened book state) and toVC is now the BooksViewController (closed book state).
+2. Add BooksViewController below BookViewController within the container view.
+3. setStartPositionForPop(_:toVC) stores the background color before setting it to nil.
+4. Animate from the opened book state to the closed book state.
+5. Clean up the view controller once the animation is done by setting the background color back to it's original color and showing the book cover.
+6. Notify the transition is complete.
+
+### **Applying the Pop Transition to the Navigation Controller**
+
+Now you need to set up the pop transition just as you did with the push transition.
+
+Open BooksViewController.swift and add the following method right after animationControllerForPresentController(_:):
+
+```
+func animationControllerForDismissController(vc: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    var transition = BookOpeningTransition()
+    transition.isPush = false
+    self.transition = transition
+    return transition
+}
+```
+
+This again creates a new BookOpeningTransition, but the only difference is that the transition is now set to be a pop.
+
+Now open CustomNavigationController.swift and replace the pop if statement with the following:
+
+```
+if operation == .Pop {
+    if let vc = toVC as? BooksViewController {
+        return vc.animationControllerForDismissController(vc)
+    }
+}
+```
+
+This returns the transition and performs the pop animation to close the book.
+
+Build and run your app; select a book to see it open and close as shown below:
+
+## **Creating an Interactive Navigation Controller**
+
+The opening and closing transition animations look great — but you can still do better! You can apply intuitive gestures to pinch the book open or closed.
+
+First, open BookOpeningTransition.swift and add the following property:
+
+```
+// MARK: Interaction Controller
+var interactionController: UIPercentDrivenInteractiveTransition?
+```
+
+Next open CustomNavigationController.swift and add the following code:
+
+```
+func navigationController(navigationController: UINavigationController, interactionControllerForAnimationController animationController: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+    if let animationController = animationController as? BookOpeningTransition {
+        return animationController.interactionController
+    }
+    return nil
+}
+```
+
+In the above method, you return the interactive animator object from BookOpeningTransition. This lets the navigation controller keep track of the progress of the animation so the user can interactively pinch a book opened or closed.
+
+Now open BooksViewController.swift and add the following property under the transition variable:
+
+```
+//1
+var interactionController: UIPercentDrivenInteractiveTransition?
+//2
+var recognizer: UIGestureRecognizer? {
+    didSet {
+        if let recognizer = recognizer {
+            collectionView?.addGestureRecognizer(recognizer)
+        }
+    }
+}
+```
+
+Here's why you added these variables:
+
+1. interactionController is of class type UIPercentDrivenInteractiveTransition, which manages the custom animation between the view controllers transitioning in and out. The interaction controller also depends on a transition animator, which is a custom object that implements the UIViewControllerAnimatorTransitioning protocol. You've created BookOpeningTransition — which does exactly that!
+2. The iteractionController can control the progress between pushing and popping view controllers. To learn more about this class, read up on Apple's documentation on how this works.
+3. recognizer is a UIGestureRecognizer. You'll use the gesture recognizer to pinch the book in and out.
+
+Now add the following snippet under the transition.isPush = true line of your BooksViewController extension in animationControllerForPresentController(_:):
+
+```
+transition.interactionController = interactionController
+```
+
+This lets your custom navigation controller know which interaction controller to use.
+
+Add the same code to animationControllerForDismissController(_:), under transition.isPush = false:
+
+```
+transition.interactionController = interactionController
+```
+
+Next, add the following code to viewDidLoad():
+
+```
+recognizer = UIPinchGestureRecognizer(target: self, action: "handlePinch:")
+```
+
+This initializes a UIPinchGestureRecognizer, which lets the user perform a pinch gesture with the action method handlePinch(_:).
+
+Implement the action under viewDidLoad() like so:
+
+```
+// MARK: Gesture recognizer action
+func handlePinch(recognizer: UIPinchGestureRecognizer) {
+    switch recognizer.state {
+    case .Began:
+        //1
+        interactionController = UIPercentDrivenInteractiveTransition()
+        //2
+        if recognizer.scale >= 1 {
+            //3
+            if recognizer.view == collectionView {
+                //4
+                var book = self.selectedCell()?.book
+                //5
+                self.openBook(book)
+            }
+            //6
+        } else {
+            //7
+            navigationController?.popViewControllerAnimated(true)
+        }
+    case .Changed:
+        //8
+        if transition!.isPush {
+            //9
+            var progress = min(max(abs((recognizer.scale - 1)) / 5, 0), 1)
+            //10
+            interactionController?.updateInteractiveTransition(progress)
+            //11
+        } else {
+            //12
+            var progress = min(max(abs((1 - recognizer.scale)), 0), 1)
+            //13
+            interactionController?.updateInteractiveTransition(progress)
+        }
+    case .Ended:
+        //14
+        interactionController?.finishInteractiveTransition()
+        //15
+        interactionController = nil
+    default:
+        break
+    }
+}
+```
+
+For the UIPinchGestureRecognizer, you'll keep track of three different states. The state began lets you know when the pinch has started. The state changed detects changes to the pinch, and ended lets you know when the pinch has ended.
+
+The rundown of your implementation of handlePinch(_:) code is below:
+
+### **Began State**
+
+1. Instantiate a UIPercentDrivenInteractiveTransition object.
+2. Check that the scale, which is dependent on the distance between the pinch points, is greater than or equal to 1.
+3. If so, ensure that the view you involved in the gesture is indeed a collection view.
+4. Grab the book being pinched.
+5. Perform a push of BookViewController to show the pages of the book.
+6. If the scale is less than 1…
+7. …perform a pop of BookViewController to show the book cover again.
+
+### **Changed State – While Pinching**
+
+1. Check to see if the current transition is performing a push.
+2. If you're pushing to BookViewController, obtain the progress of the user's pinch gesture. progress must be between 0 and 1. You scale the pinch down to one-fifth of its original value; this gives the user more control over the transition. Otherwise pinching a book open would appear to jump to the opened state immediately.
+3. Update the completed percentage of the transition based on the progress you calculated earlier.
+4. If the current transition is not performing a push, then it must be performing a pop.
+5. While pinching the book closed, the scale must progress from 1 to 0.
+6. Finally, update the progress of the transition.
+
+### **End State – Stop Pinching**
+
+1. Notify the system that the user interaction of the transition is complete.
+2. Set the interaction controller to nil.
+
+Finally, you need to implement the pinch-to-closed state. Therefore you have to pass the gesture recognizer to BookViewController so it can pop itself.
+
+Open up BookViewController.swift, and add the following property under the book variable:
+
+```
+var recognizer: UIGestureRecognizer? {
+    didSet {
+        if let recognizer = recognizer {
+            collectionView?.addGestureRecognizer(recognizer)
+        }
+    }
+}
+```
+
+Whenever you set the gesture recognizer in BookViewController, the gesture will be added immediately to the collection view so you can track the pinch gesture as the user closes the book.
+
+Next you need to pass the gesture recognizer between the BooksViewController and BookViewController.
+
+Open up BookOpeningTransition.swift. Add the following lines to cleanUpPush(_:toVC) after the point where you set the background color:
+
+```
+// Pass the gesture recognizer
+toVC.recognizer = fromVC.recognizer
+```
+
+Once you've pushed from BooksViewController to the BookViewController, you pass the pinch gesture to BookViewController. This automatically adds the pinch gesture to the collection view.
+
+When you pop from BookViewController to BooksViewController, you have to pass the pinch gesture back.
+
+Add the following line to cleanUpPop(_:toVC), just after the line where you set the background color:
+
+```
+// Pass the gesture recognizer
+toVC.recognizer = fromVC.recognizer
+```
+
+Build and run your app; select any book and use a pinch gesture to open and close the book:
+
+The pinch gesture is a natural mechanism to open and close a book; it is also an opportunity to clean up your interface. You don't need that Back button in the navigation bar anymore — time to get rid of it.
+
+Open Main.storyboard, select Custom Navigation View Controller, open the Attributes Inspector and uncheck Bar Visibility under the Navigation Controller section, like so:
+
+Build and run your app again:
+
+Much cleaner! :]
