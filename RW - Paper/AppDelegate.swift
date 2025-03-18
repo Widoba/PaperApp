@@ -22,6 +22,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Configure app for full-screen presentation
         UIApplication.shared.isStatusBarHidden = false
         
+        // Make sure we have a proper scene configuration
+        if let window = self.window {
+            // Ensure window fills the screen
+            window.frame = UIScreen.main.bounds
+            window.makeKeyAndVisible()
+        }
+        
         return true
     }
     

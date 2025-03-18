@@ -29,6 +29,10 @@ class BooksViewController: UICollectionViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        // Apply full screen setup
+        configureFullScreenDisplay()
+        
         books = BookStore.sharedInstance.loadBooks(plist: "Books")
         recognizer = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
         
@@ -164,6 +168,9 @@ class BooksViewController: UICollectionViewController {
             window.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
         }
         
+        // Force the view to fill the screen by directly setting its frame to screen bounds
+        view.frame = UIScreen.main.bounds
+        
         // Ensure collection view extends to edges
         if #available(iOS 11.0, *) {
             collectionView.contentInsetAdjustmentBehavior = .never
@@ -176,13 +183,35 @@ class BooksViewController: UICollectionViewController {
         // Hide navigation bar to maximize space
         navigationController?.setNavigationBarHidden(true, animated: false)
         
-        // Make sure collection view uses full bounds
+        // Make sure collection view uses full screen bounds - important!
         view.layoutIfNeeded()
-        collectionView.frame = UIScreen.main.bounds // Use screen bounds instead of view bounds
+        collectionView.frame = UIScreen.main.bounds
         
         // Remove any additional insets
         collectionView.contentInset = UIEdgeInsets.zero
         collectionView.scrollIndicatorInsets = UIEdgeInsets.zero
+    }
+    
+    private func configureFullScreenDisplay() {
+        // Set collection view to use the full screen
+        if let collectionView = collectionView {
+            // Extend beyond safe areas
+            if #available(iOS 11.0, *) {
+                collectionView.contentInsetAdjustmentBehavior = .never
+            } else {
+                automaticallyAdjustsScrollViewInsets = false
+            }
+            
+            // Set the frame to match the screen bounds exactly
+            let fullScreenFrame = UIScreen.main.bounds
+            view.frame = fullScreenFrame
+            collectionView.frame = fullScreenFrame
+            
+            // Update collection view layout
+            if let layout = collectionViewLayout as? BooksLayout {
+                layout.invalidateLayout()
+            }
+        }
     }
     
     // Add status bar style control
