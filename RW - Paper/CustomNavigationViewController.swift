@@ -28,12 +28,30 @@ class CustomNavigationViewController: UINavigationController, UINavigationContro
         // Ensure background color matches app's background
         view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
         
+        // Print current frame
+        print("CustomNavigationViewController - Initial frame: \(view.frame)")
+        print("CustomNavigationViewController - Screen bounds: \(UIScreen.main.bounds)")
+        
         // Force the view to use full screen bounds
         view.frame = UIScreen.main.bounds
+        print("CustomNavigationViewController - After setting frame: \(view.frame)")
         
-        // Ensure we don't respect safe area insets
+        // Make sure our view doesn't automatically adjust for safe areas
         if #available(iOS 11.0, *) {
             additionalSafeAreaInsets = UIEdgeInsets.zero
+            view.insetsLayoutMarginsFromSafeArea = false
+            
+            // Make sure our child view controllers don't adjust their content for the safe area
+            for childVC in children {
+                childVC.additionalSafeAreaInsets = UIEdgeInsets.zero
+                
+                // Check for collection view controllers
+                if let collectionVC = childVC as? UICollectionViewController {
+                    collectionVC.collectionView?.contentInsetAdjustmentBehavior = .never
+                }
+                
+                print("CustomNavigationViewController - Configured child: \(type(of: childVC))")
+            }
         }
     }
     
@@ -42,6 +60,10 @@ class CustomNavigationViewController: UINavigationController, UINavigationContro
         
         // Always hide the navigation bar
         setNavigationBarHidden(true, animated: false)
+        
+        // Force full screen
+        view.frame = UIScreen.main.bounds
+        print("CustomNavigationViewController - viewWillAppear frame: \(view.frame)")
     }
     
     override func viewDidLayoutSubviews() {

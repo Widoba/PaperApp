@@ -27,81 +27,59 @@ class BookViewController: UICollectionViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Apply full screen setup
-        configureFullScreenDisplay()
+        print("BookViewController - viewDidLoad")
+        print("BookViewController - Screen bounds: \(UIScreen.main.bounds)")
+        print("BookViewController - Initial view frame: \(view.frame)")
         
-        // Set background color for the entire view
-        view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        collectionView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        
+        // Set up our view
         setupEdgeToEdgeLayout()
         
-        // Register for orientation change notifications
+        // Add notification for orientation change
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(orientationDidChange),
-            name: UIDevice.orientationDidChangeNotification,
+            name: UIDevice.orientationDidChangeNotification, 
             object: nil
         )
+        
+        self.pages = book.pages
+        
+        // Set background color
+        view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        collectionView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        
+        // Print collection view details
+        print("BookViewController - CollectionView frame: \(collectionView.frame)")
+        print("BookViewController - CollectionView contentInset: \(collectionView.contentInset)")
     }
     
-    private func configureFullScreenDisplay() {
-        // Set collection view to use the full screen
-        if let collectionView = collectionView {
-            // Extend beyond safe areas
-            if #available(iOS 11.0, *) {
-                collectionView.contentInsetAdjustmentBehavior = .never
-            } else {
-                automaticallyAdjustsScrollViewInsets = false
-            }
-            
-            // Set the frame to match the screen bounds exactly
-            let fullScreenFrame = UIScreen.main.bounds
-            view.frame = fullScreenFrame
-            collectionView.frame = fullScreenFrame
-            
-            // Update collection view layout
-            if let layout = collectionViewLayout as? BookLayout {
-                layout.invalidateLayout()
-            }
-        }
-    }
-    
-    private func setupEdgeToEdgeLayout() {
+    func setupEdgeToEdgeLayout() {
         // Extend layout under bars and safe areas
         edgesForExtendedLayout = .all
         extendedLayoutIncludesOpaqueBars = true
         
-        // Set status bar appearance to ensure proper extension
-        setNeedsStatusBarAppearanceUpdate()
-        
-        // Make sure window background color matches view
-        if let window = UIApplication.shared.windows.first {
-            window.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        }
-        
-        // Force the view to fill the screen by directly setting its frame to screen bounds
+        // Set view to use full screen bounds
         view.frame = UIScreen.main.bounds
         
-        // Ensure collection view extends to edges
+        // Disable safe area adjustments
         if #available(iOS 11.0, *) {
+            // Disable content inset adjustment
             collectionView.contentInsetAdjustmentBehavior = .never
-            view.insetsLayoutMarginsFromSafeArea = false
-            collectionView.insetsLayoutMarginsFromSafeArea = false
+            
+            // Reset any additional safe area insets
+            additionalSafeAreaInsets = .zero
         } else {
             automaticallyAdjustsScrollViewInsets = false
         }
         
-        // Hide navigation bar to maximize space
+        // Hide the navigation bar
         navigationController?.setNavigationBarHidden(true, animated: false)
         
-        // Make sure collection view uses full screen bounds - important!
-        view.layoutIfNeeded()
+        // Ensure collection view fills the screen
         collectionView.frame = UIScreen.main.bounds
         
-        // Remove any additional insets
-        collectionView.contentInset = UIEdgeInsets.zero
-        collectionView.scrollIndicatorInsets = UIEdgeInsets.zero
+        print("BookViewController - After setupEdgeToEdgeLayout, view frame: \(view.frame)")
+        print("BookViewController - CollectionView frame: \(collectionView.frame)")
     }
     
     deinit {
@@ -143,16 +121,17 @@ class BookViewController: UICollectionViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Force view to use full screen bounds
-        let fullScreenBounds = UIScreen.main.bounds
-        view.frame = fullScreenBounds
+        // Force edge-to-edge layout
+        view.frame = UIScreen.main.bounds
+        collectionView.frame = UIScreen.main.bounds
         
-        // Force background color
-        view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        view.superview?.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        
-        // Hide navigation bar completely
-        navigationController?.setNavigationBarHidden(true, animated: false)
+        print("BookViewController - viewWillAppear frame: \(view.frame)")
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        print("BookViewController - viewDidAppear frame: \(view.frame)")
+        print("BookViewController - CollectionView frame: \(collectionView.frame)")
     }
     
     override func viewDidLayoutSubviews() {

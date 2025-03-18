@@ -30,21 +30,43 @@ class BooksViewController: UICollectionViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Apply full screen setup
-        configureFullScreenDisplay()
+        print("BooksViewController - viewDidLoad")
+        print("BooksViewController - Screen bounds: \(UIScreen.main.bounds)")
+        print("BooksViewController - Initial view frame: \(view.frame)")
         
+        // Setup
+        setupGestureRecognizer()
+        setupEdgeToEdgeLayout()
+
+        // Add notification for orientation change
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(orientationDidChange),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
+        
+        // Print collection view details
+        if let collectionView = self.collectionView {
+            print("BooksViewController - CollectionView frame: \(collectionView.frame)")
+            print("BooksViewController - CollectionView contentInset: \(collectionView.contentInset)")
+            
+            // Ensure collection view fills the screen
+            collectionView.frame = UIScreen.main.bounds
+            collectionView.contentInsetAdjustmentBehavior = .never
+            
+            print("BooksViewController - After setting frame, CollectionView frame: \(collectionView.frame)")
+        }
+        
+        // Load books
         books = BookStore.sharedInstance.loadBooks(plist: "Books")
-        recognizer = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
         
-        // Register for orientation change notifications
-        NotificationCenter.default.addObserver(self, selector: #selector(orientationDidChange), name: UIDevice.orientationDidChangeNotification, object: nil)
+        // Recognizer is already set up in setupGestureRecognizer()
+        // recognizer = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
         
         // Set background color for the entire view
         view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
         collectionView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        
-        // Set up edge-to-edge layout
-        setupEdgeToEdgeLayout()
     }
     
     deinit {
@@ -81,6 +103,14 @@ class BooksViewController: UICollectionViewController {
         return nil
     }
     
+    private func setupGestureRecognizer() {
+        // Create and add the pinch gesture recognizer
+        let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        self.recognizer = pinchRecognizer
+        
+        print("BooksViewController - Added pinch gesture recognizer")
+    }
+    
     // MARK: Gesture recognizer action
     
     @objc func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
@@ -100,7 +130,13 @@ class BooksViewController: UICollectionViewController {
             }
             
         case .changed:
-            if transition!.isPush {
+            // Add a guard to make sure transition is not nil before using it
+            guard let transition = transition else {
+                print("BooksViewController - Warning: transition is nil in handlePinch")
+                return
+            }
+            
+            if transition.isPush {
                 let progress = min(max(abs((recognizer.scale - 1)) / 5, 0), 1)
                 interactionController?.update(progress)
             }
@@ -119,13 +155,39 @@ class BooksViewController: UICollectionViewController {
     }
     
     func openBook(book: Book?) {
-        let vc = storyboard?.instantiateViewController(withIdentifier: "BookViewController") as! BookViewController
-        vc.book = selectedCell()?.book
-        // UICollectionView loads it's cells on a background thread, so make sure it's loaded before passing it to the animation handler
-        vc.view.snapshotView(afterScreenUpdates: true)
-        DispatchQueue.main.async {
-            self.navigationController?.pushViewController(vc, animated: true)
+        print("BooksViewController - openBook called")
+        
+        guard let storyboard = self.storyboard else {
+            print("BooksViewController - ERROR: Storyboard is nil in openBook")
             return
+        }
+        
+        guard let vc = storyboard.instantiateViewController(withIdentifier: "BookViewController") as? BookViewController else {
+            print("BooksViewController - ERROR: Failed to instantiate BookViewController")
+            return
+        }
+        
+        guard let selectedBook = selectedCell()?.book else {
+            print("BooksViewController - Warning: Selected book is nil")
+            // We'll still continue, but log the warning
+            return
+        }
+        
+        print("BooksViewController - Setting book for BookViewController")
+        vc.book = selectedBook
+        
+        // UICollectionView loads its cells on a background thread, so make sure it's loaded before passing it to the animation handler
+        print("BooksViewController - Creating snapshot for smooth transition")
+        _ = vc.view.snapshotView(afterScreenUpdates: true)
+        
+        guard let navigationController = self.navigationController else {
+            print("BooksViewController - ERROR: Navigation controller is nil")
+            return
+        }
+        
+        print("BooksViewController - Pushing BookViewController to navigation stack")
+        DispatchQueue.main.async {
+            navigationController.pushViewController(vc, animated: true)
         }
     }
     
@@ -136,16 +198,27 @@ class BooksViewController: UICollectionViewController {
     }
     
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        if let books = books {
-            return books.count
+        guard let books = books, !books.isEmpty else {
+            print("BooksViewController - Warning: books array is nil or empty")
+            return 0
         }
-        return 0
+        
+        let count = books.count
+        print("BooksViewController - Number of items: \(count)")
+        return count
     }
     
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BookCoverCell", for: indexPath) as! BookCoverCell
         
-        cell.book = books?[indexPath.row]
+        guard let books = self.books, indexPath.row < books.count else {
+            print("BooksViewController - Warning: Invalid book index: \(indexPath.row)")
+            // Configure cell with placeholder or empty state
+            cell.book = nil
+            return cell
+        }
+        
+        cell.book = books[indexPath.row]
         
         return cell
     }
@@ -156,62 +229,48 @@ class BooksViewController: UICollectionViewController {
     }
     
     private func setupEdgeToEdgeLayout() {
-        // Extend layout under bars and safe areas
+        // Configure for edge-to-edge layout
         edgesForExtendedLayout = .all
         extendedLayoutIncludesOpaqueBars = true
         
-        // Set status bar appearance to ensure proper extension
-        setNeedsStatusBarAppearanceUpdate()
-        
-        // Make sure window background color matches view
-        if let window = UIApplication.shared.windows.first {
-            window.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        }
-        
-        // Force the view to fill the screen by directly setting its frame to screen bounds
-        view.frame = UIScreen.main.bounds
-        
-        // Ensure collection view extends to edges
+        // Disable safe area adjustments
         if #available(iOS 11.0, *) {
-            collectionView.contentInsetAdjustmentBehavior = .never
-            view.insetsLayoutMarginsFromSafeArea = false
-            collectionView.insetsLayoutMarginsFromSafeArea = false
+            // Disable content inset adjustment
+            collectionView?.contentInsetAdjustmentBehavior = .never
+            
+            // Reset any additional safe area insets
+            additionalSafeAreaInsets = .zero
         } else {
             automaticallyAdjustsScrollViewInsets = false
         }
         
-        // Hide navigation bar to maximize space
+        // Hide the navigation bar
         navigationController?.setNavigationBarHidden(true, animated: false)
         
-        // Make sure collection view uses full screen bounds - important!
-        view.layoutIfNeeded()
-        collectionView.frame = UIScreen.main.bounds
-        
-        // Remove any additional insets
-        collectionView.contentInset = UIEdgeInsets.zero
-        collectionView.scrollIndicatorInsets = UIEdgeInsets.zero
-    }
-    
-    private func configureFullScreenDisplay() {
-        // Set collection view to use the full screen
+        // Apply auto layout constraints to ensure collection view fills the screen
         if let collectionView = collectionView {
-            // Extend beyond safe areas
-            if #available(iOS 11.0, *) {
-                collectionView.contentInsetAdjustmentBehavior = .never
-            } else {
-                automaticallyAdjustsScrollViewInsets = false
-            }
+            // IMPORTANT: Don't mix frame and auto layout approaches
+            // We'll use just auto layout here
             
-            // Set the frame to match the screen bounds exactly
-            let fullScreenFrame = UIScreen.main.bounds
-            view.frame = fullScreenFrame
-            collectionView.frame = fullScreenFrame
+            // Set translatesAutoresizingMaskIntoConstraints to false for auto layout
+            collectionView.translatesAutoresizingMaskIntoConstraints = false
             
-            // Update collection view layout
-            if let layout = collectionViewLayout as? BooksLayout {
-                layout.invalidateLayout()
+            // Remove any existing constraints first to avoid conflicts
+            let existingConstraints = view.constraints.filter {
+                ($0.firstItem === collectionView || $0.secondItem === collectionView)
             }
+            view.removeConstraints(existingConstraints)
+            
+            // Add constraints to make collection view fill the entire view
+            NSLayoutConstraint.activate([
+                collectionView.topAnchor.constraint(equalTo: view.topAnchor),
+                collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            ])
         }
+        
+        print("BooksViewController - After setupEdgeToEdgeLayout, view frame: \(view.frame)")
     }
     
     // Add status bar style control
@@ -226,34 +285,32 @@ class BooksViewController: UICollectionViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Force view to use full screen bounds
-        let fullScreenBounds = UIScreen.main.bounds
-        view.frame = fullScreenBounds
-        
         // Force background color
         view.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        view.superview?.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
+        collectionView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
         
         // Hide navigation bar completely
         navigationController?.setNavigationBarHidden(true, animated: false)
+        
+        print("BooksViewController - viewWillAppear")
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        print("BooksViewController - viewDidAppear frame: \(view.frame)")
+        print("BooksViewController - CollectionView frame: \(collectionView?.frame ?? .zero)")
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        
-        // Set collection view frame to window bounds, not view bounds
-        if let window = UIApplication.shared.windows.first {
-            let fullScreenBounds = window.bounds
-            collectionView.frame = fullScreenBounds
-        } else {
-            collectionView.frame = UIScreen.main.bounds
-        }
         
         // Make sure content insets are zero
         collectionView.contentInset = .zero
         
         // Force layout update
         collectionViewLayout.invalidateLayout()
+        
+        print("BooksViewController - viewDidLayoutSubviews, collection view frame: \(collectionView?.frame ?? .zero)")
     }
 }
 

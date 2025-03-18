@@ -15,34 +15,73 @@ class FullScreenRootViewController: UIViewController {
     // Background color for the app
     let backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
     
-    convenience init(contentViewController: UIViewController) {
-        self.init()
+    // Add a proper initializer
+    init(contentViewController: UIViewController) {
         self.contentViewController = contentViewController
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Set the background color
-        view.backgroundColor = backgroundColor
+        print("FullScreenRootViewController - viewDidLoad")
+        print("FullScreenRootViewController - Screen bounds: \(UIScreen.main.bounds)")
+        print("FullScreenRootViewController - Initial view frame: \(view.frame)")
+        
+        // Make sure we're using the full screen size
+        view.frame = UIScreen.main.bounds
+        
+        // Set the background color to be clearly visible
+        view.backgroundColor = UIColor.purple
         
         // Add the content view controller
         if let contentVC = contentViewController {
+            print("FullScreenRootViewController - Adding content view controller: \(type(of: contentVC))")
+            
+            // Basic containment pattern
             addChild(contentVC)
             view.addSubview(contentVC.view)
+            
+            // Use frame-based approach to fill the full screen
+            contentVC.view.frame = UIScreen.main.bounds
+            contentVC.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            
+            print("FullScreenRootViewController - Content view frame after setup: \(contentVC.view.frame)")
+            
             contentVC.didMove(toParent: self)
             
-            // Ensure content view fills the entire screen
-            contentVC.view.frame = view.bounds
-            contentVC.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            // Force a layout update
+            view.setNeedsLayout()
+            view.layoutIfNeeded()
+            
+            print("FullScreenRootViewController - After layout, content view frame: \(contentVC.view.frame)")
+        } else {
+            print("FullScreenRootViewController - ERROR: No content view controller provided!")
         }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        print("FullScreenRootViewController - viewWillAppear, view frame: \(view.frame)")
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        print("FullScreenRootViewController - viewDidAppear, view frame: \(view.frame)")
+        print("FullScreenRootViewController - Content view frame: \(contentViewController?.view.frame ?? .zero)")
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
-        // Force the content view to fill our bounds completely
-        contentViewController?.view.frame = view.bounds
+        // Make sure our view fills the entire screen
+        if let window = view.window {
+            view.frame = window.bounds
+        }
     }
     
     // Force status bar settings
@@ -58,14 +97,21 @@ class FullScreenRootViewController: UIViewController {
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
         
+        // Only proceed if view is loaded and in window hierarchy
+        guard isViewLoaded && view.window != nil else { return }
+        
         if #available(iOS 11.0, *) {
-            // Set additional insets to zero to counter any system-added insets
-            additionalSafeAreaInsets = UIEdgeInsets(
-                top: -view.safeAreaInsets.top,
-                left: -view.safeAreaInsets.left,
-                bottom: -view.safeAreaInsets.bottom,
-                right: -view.safeAreaInsets.right
-            )
+            // Check if safe area insets are valid before trying to counter them
+            let insets = view.safeAreaInsets
+            if insets != .zero {
+                // Set additional insets to zero to counter any system-added insets
+                additionalSafeAreaInsets = UIEdgeInsets(
+                    top: -insets.top,
+                    left: -insets.left,
+                    bottom: -insets.bottom,
+                    right: -insets.right
+                )
+            }
         }
     }
     

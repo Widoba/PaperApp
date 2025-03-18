@@ -19,25 +19,52 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Set the window background color
         window?.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
         
-        // Configure app for full-screen presentation
-        UIApplication.shared.isStatusBarHidden = false
+        // Configure full-screen presentation
+        // Note: Status bar appearance is now controlled via view controllers, not globally
+        // The deprecated call has been removed
         
         // Make sure we have a proper scene configuration
         if let window = self.window {
             // Ensure window fills the screen
             window.frame = UIScreen.main.bounds
+            print("AppDelegate - Window size: \(window.frame.size)")
             
-            // Check if we already have a root view controller (from storyboard)
-            if let rootVC = window.rootViewController {
-                // Replace the standard root view controller with our custom one
-                let fullScreenRootVC = FullScreenRootViewController(contentViewController: rootVC)
-                window.rootViewController = fullScreenRootVC
-            }
+            // Handle our custom root view controller setup
+            setupRootViewControllerDirectly(for: window)
             
             window.makeKeyAndVisible()
+            
+            // Print final window configuration
+            print("AppDelegate - Final window config - root: \(type(of: window.rootViewController))")
         }
         
         return true
+    }
+    
+    private func setupRootViewControllerDirectly(for window: UIWindow) {
+        // Get the storyboard (use Main.storyboard)
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        
+        // Get the initial view controller from the storyboard
+        if let initialVC = storyboard.instantiateInitialViewController() {
+            print("AppDelegate - Created initial view controller: \(type(of: initialVC))")
+            
+            // Force view to load
+            _ = initialVC.view
+            
+            // Create our custom container
+            let fullScreenRootVC = FullScreenRootViewController(contentViewController: initialVC)
+            
+            // Force view to load
+            _ = fullScreenRootVC.view
+            
+            // Set as root
+            window.rootViewController = fullScreenRootVC
+            
+            print("AppDelegate - Set root to FullScreenRootViewController containing \(type(of: initialVC))")
+        } else {
+            print("AppDelegate - ERROR: Could not instantiate initial view controller from storyboard")
+        }
     }
     
     func applicationWillResignActive(_ application: UIApplication) {
