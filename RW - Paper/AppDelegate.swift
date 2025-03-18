@@ -27,27 +27,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             // Ensure window fills the screen
             window.frame = UIScreen.main.bounds
             
-            // Add a background view to ensure coverage
-            addBackgroundView(to: window)
+            // Check if we already have a root view controller (from storyboard)
+            if let rootVC = window.rootViewController {
+                // Replace the standard root view controller with our custom one
+                let fullScreenRootVC = FullScreenRootViewController(contentViewController: rootVC)
+                window.rootViewController = fullScreenRootVC
+            }
             
             window.makeKeyAndVisible()
         }
         
         return true
-    }
-    
-    private func addBackgroundView(to window: UIWindow) {
-        // Create a background view that will cover the entire screen
-        let backgroundView = UIView(frame: UIScreen.main.bounds)
-        backgroundView.backgroundColor = UIColor(red: 0.5, green: 0.6, blue: 0.65, alpha: 1.0)
-        backgroundView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        
-        // Insert at the bottom of the window's view hierarchy
-        if let rootVC = window.rootViewController {
-            rootVC.view.insertSubview(backgroundView, at: 0)
-        } else {
-            window.insertSubview(backgroundView, at: 0)
-        }
     }
     
     func applicationWillResignActive(_ application: UIApplication) {
