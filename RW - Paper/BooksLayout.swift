@@ -15,18 +15,18 @@ class BooksLayout: UICollectionViewFlowLayout {
     
     var numberOfItems = 0
 
-    required init(coder aDecoder: NSCoder) {
+    required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         
-        scrollDirection = UICollectionViewScrollDirection.Horizontal
-        itemSize = CGSizeMake(PageWidth, PageHeight)
+        scrollDirection = UICollectionView.ScrollDirection.horizontal
+        itemSize = CGSize(width: PageWidth, height: PageHeight)
         minimumInteritemSpacing = 10
     }
     
-    override func prepareLayout() {
-        super.prepareLayout()
+    override func prepare() {
+        super.prepare()
         
-        collectionView?.decelerationRate = UIScrollViewDecelerationRateFast
+        collectionView?.decelerationRate = UIScrollView.DecelerationRate.fast
         
         // Make sure the first book is centered.
         collectionView?.contentInset = UIEdgeInsets(
@@ -36,32 +36,32 @@ class BooksLayout: UICollectionViewFlowLayout {
             right: collectionView!.bounds.width / 2 - PageWidth / 2
         )
         
-        numberOfItems = collectionView!.numberOfItemsInSection(0)
+        numberOfItems = collectionView!.numberOfItems(inSection: 0)
     }
     
-    override func layoutAttributesForElementsInRect(rect: CGRect) -> [AnyObject]? {
-        var array = super.layoutAttributesForElementsInRect(rect) as [UICollectionViewLayoutAttributes]
+    override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
+        guard let array = super.layoutAttributesForElements(in: rect) else { return nil }
         
         for attributes in array {
-            var frame = attributes.frame
-            var distance = abs(collectionView!.contentOffset.x + collectionView!.contentInset.left - frame.origin.x)
-            var scale = 0.7 * min(max(1 - distance / (collectionView!.bounds.width), 0.75), 1)
-            attributes.transform = CGAffineTransformMakeScale(scale, scale)
+            let frame = attributes.frame
+            let distance = abs(collectionView!.contentOffset.x + collectionView!.contentInset.left - frame.origin.x)
+            let scale = 0.7 * min(max(1 - distance / (collectionView!.bounds.width), 0.75), 1)
+            attributes.transform = CGAffineTransform(scaleX: scale, y: scale)
         }
         
         return array
     }
     
-    override func shouldInvalidateLayoutForBoundsChange(newBounds: CGRect) -> Bool {
+    override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
         return true
     }
     
-    override func targetContentOffsetForProposedContentOffset(proposedContentOffset: CGPoint, withScrollingVelocity velocity: CGPoint) -> CGPoint {
+    override func targetContentOffset(forProposedContentOffset proposedContentOffset: CGPoint, withScrollingVelocity velocity: CGPoint) -> CGPoint {
         // Snap cells to centre
         var newOffset = CGPoint()
         
-        var layout = collectionView!.collectionViewLayout as UICollectionViewFlowLayout
-        var width = layout.itemSize.width + layout.minimumLineSpacing
+        guard let layout = collectionView!.collectionViewLayout as? UICollectionViewFlowLayout else { return proposedContentOffset }
+        let width = layout.itemSize.width + layout.minimumLineSpacing
         var offset = proposedContentOffset.x + collectionView!.contentInset.left
         
         if velocity.x > 0 {
@@ -81,5 +81,4 @@ class BooksLayout: UICollectionViewFlowLayout {
         
         return newOffset
     }
-    
 }

@@ -14,19 +14,20 @@ class BookPageCell: UICollectionViewCell {
     @IBOutlet weak var imageView: UIImageView!
     
     var book: Book?
+    var isRightPage: Bool = false
+    var shadowLayer = CAGradientLayer()
     
     var image: UIImage? {
         didSet {
-            var corners: UIRectCorner = !isRightPage ? .TopRight | .BottomRight : .TopLeft | .BottomLeft
-            imageView.image = image!.imageByScalingAndCroppingForSize(bounds.size).imageWithRoundedCornersSize(20, corners: corners)
+            guard let image = image else { return }
+            let corners: UIRectCorner = isRightPage ? [.topRight, .bottomRight] : [.topLeft, .bottomLeft]
+            imageView.image = image.imageByScalingAndCroppingForSize(targetSize: bounds.size).imageWithRoundedCornersSize(cornerRadius: 20, corners: corners)
         }
     }
     
     func updateShadowLayer(animated: Bool = false) {
-        var ratio: CGFloat = 0
-        
         // Get ratio from transform. Check BookCollectionViewLayout for more details
-        var inverseRatio = 1 - abs(getRatioFromTransform())
+        let inverseRatio = 1 - abs(getRatioFromTransform())
         
         if !animated {
             CATransaction.begin()
@@ -35,30 +36,28 @@ class BookPageCell: UICollectionViewCell {
         
         if isRightPage {
             // Right page
-            shadowLayer.colors = NSArray(objects:
-                UIColor.darkGrayColor().colorWithAlphaComponent(inverseRatio * 0.45).CGColor,
-                UIColor.darkGrayColor().colorWithAlphaComponent(inverseRatio * 0.40).CGColor,
-                UIColor.darkGrayColor().colorWithAlphaComponent(inverseRatio * 0.55).CGColor
-            )
-            shadowLayer.locations = NSArray(objects:
-                NSNumber(float: 0.00),
-                NSNumber(float: 0.02),
-                NSNumber(float: 1.00)
-            )
+            shadowLayer.colors = [
+                UIColor.darkGray.withAlphaComponent(inverseRatio * 0.45).cgColor,
+                UIColor.darkGray.withAlphaComponent(inverseRatio * 0.40).cgColor,
+                UIColor.darkGray.withAlphaComponent(inverseRatio * 0.55).cgColor
+            ]
+            shadowLayer.locations = [
+                NSNumber(value: 0.00),
+                NSNumber(value: 0.02),
+                NSNumber(value: 1.00)
+            ] as [NSNumber]
         } else {
             // Left page
-            shadowLayer.colors = NSArray(objects:
-                UIColor.darkGrayColor().colorWithAlphaComponent(inverseRatio * 0.30).CGColor,
-                UIColor.darkGrayColor().colorWithAlphaComponent(inverseRatio * 0.40).CGColor,
-                UIColor.darkGrayColor().colorWithAlphaComponent(inverseRatio * 0.50).CGColor,
-                UIColor.darkGrayColor().colorWithAlphaComponent(inverseRatio * 0.55).CGColor
-            )
-            shadowLayer.locations = NSArray(objects:
-                NSNumber(float: 0.00),
-                NSNumber(float: 0.50),
-                NSNumber(float: 0.98),
-                NSNumber(float: 1.00)
-            )
+            shadowLayer.colors = [
+                UIColor.darkGray.withAlphaComponent(inverseRatio * 0.55).cgColor,
+                UIColor.darkGray.withAlphaComponent(inverseRatio * 0.40).cgColor,
+                UIColor.darkGray.withAlphaComponent(inverseRatio * 0.45).cgColor
+            ]
+            shadowLayer.locations = [
+                NSNumber(value: 0.00),
+                NSNumber(value: 0.98),
+                NSNumber(value: 1.00)
+            ] as [NSNumber]
         }
         
         if !animated {
@@ -69,23 +68,19 @@ class BookPageCell: UICollectionViewCell {
     func getRatioFromTransform() -> CGFloat {
         var ratio: CGFloat = 0
         
-        var rotationY = CGFloat(layer.valueForKeyPath("transform.rotation.y")!.floatValue!)
+        let rotationY = CGFloat((layer.value(forKeyPath: "transform.rotation.y") as! NSNumber).floatValue)
         if isRightPage {
-            var progress = -(1 - rotationY / CGFloat(M_PI_2))
+            let progress = -(1 - rotationY / CGFloat(Double.pi / 2))
             ratio = progress
         }
             
         else {
-            var progress = 1 - rotationY / CGFloat(-M_PI_2)
+            let progress = 1 - rotationY / CGFloat(-Double.pi / 2)
             ratio = progress
         }
         
         return ratio
     }
-    
-    var isRightPage: Bool = false
-    
-    var shadowLayer: CAGradientLayer = CAGradientLayer()
     
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -98,27 +93,38 @@ class BookPageCell: UICollectionViewCell {
         imageView.layer.allowsEdgeAntialiasing = true
     }
     
-    override func applyLayoutAttributes(layoutAttributes: UICollectionViewLayoutAttributes!) {
-        super.applyLayoutAttributes(layoutAttributes)
-        if layoutAttributes.indexPath.item % 2 == 0 {
-            // The book's spine is on the left of the page
-            layer.anchorPoint = CGPointMake(0, 0.5)
-            isRightPage = false
-        } else {
-            // The book's spine is on the right of the page
-            layer.anchorPoint = CGPointMake(1, 0.5)
-            isRightPage = true
+    override func apply(_ layoutAttributes: UICollectionViewLayoutAttributes) {
+        super.apply(layoutAttributes)
+        
+        let rotationY = CGFloat((layer.value(forKeyPath: "transform.rotation.y") as! NSNumber).floatValue)
+        let wasRightPage = isRightPage
+        isRightPage = rotationY < CGFloat(0)
+        
+        // If the page orientation changed, update the image to apply correct rounded corners
+        if wasRightPage != isRightPage && image != nil {
+            // This will trigger the didSet which applies the correct corners
+            let currentImage = image
+            image = currentImage
         }
         
-        self.updateShadowLayer()
+        // Set anchor point based on which side of the book's spine the page is on
+        if isRightPage {
+            // Right page - spine is on the left, so anchor point should be left edge
+            layer.anchorPoint = CGPoint(x: 0, y: 0.5)
+        } else {
+            // Left page - spine is on the right, so anchor point should be right edge
+            layer.anchorPoint = CGPoint(x: 1, y: 0.5)
+        }
+        
+        shadowLayer.frame = bounds
     }
 
     func initShadowLayer() {
-        var shadowLayer = CAGradientLayer()
+        let shadowLayer = CAGradientLayer()
         
         shadowLayer.frame = bounds
-        shadowLayer.startPoint = CGPointMake(0, 0.5)
-        shadowLayer.endPoint = CGPointMake(1, 0.5)
+        shadowLayer.startPoint = CGPoint(x: 0, y: 0.5)
+        shadowLayer.endPoint = CGPoint(x: 1, y: 0.5)
         
         self.imageView.layer.addSublayer(shadowLayer)
         self.shadowLayer = shadowLayer

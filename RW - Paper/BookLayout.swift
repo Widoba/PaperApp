@@ -15,40 +15,39 @@ class BookLayout: UICollectionViewLayout {
    
     var numberOfItems = 0
     
-    override func prepareLayout() {
-        super.prepareLayout()
-        collectionView?.decelerationRate = UIScrollViewDecelerationRateFast
-        numberOfItems = collectionView!.numberOfItemsInSection(0)
-        collectionView?.pagingEnabled = true
+    override func prepare() {
+        super.prepare()
+        collectionView?.decelerationRate = UIScrollView.DecelerationRate.fast
+        numberOfItems = collectionView!.numberOfItems(inSection: 0)
+        collectionView?.isPagingEnabled = true
     }
     
-    override func shouldInvalidateLayoutForBoundsChange(newBounds: CGRect) -> Bool {
+    override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
         // Make sure to update the layout if the bounds change
         return true
     }
     
-    override func collectionViewContentSize() -> CGSize {
-        return CGSizeMake((CGFloat(numberOfItems / 2)) * collectionView!.bounds.width, collectionView!.bounds.height)
+    override var collectionViewContentSize: CGSize {
+        return CGSize(width: (CGFloat(numberOfItems / 2)) * collectionView!.bounds.width, height: collectionView!.bounds.height)
     }
     
-    override func layoutAttributesForElementsInRect(rect: CGRect) -> [AnyObject]? {
+    override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
         var array: [UICollectionViewLayoutAttributes] = []
         for i in 0 ... max(0, numberOfItems - 1) {
-            var indexPath = NSIndexPath(forItem: i, inSection: 0)
-            var attributes = layoutAttributesForItemAtIndexPath(indexPath)
-            if attributes != nil {
-                array += [layoutAttributesForItemAtIndexPath(indexPath)]
+            let indexPath = IndexPath(item: i, section: 0)
+            if let attributes = layoutAttributesForItem(at: indexPath) {
+                array.append(attributes)
             }
         }
         return array
     }
     
-    override func layoutAttributesForItemAtIndexPath(indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
+    override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
         // Create layout attributes object
-        var layoutAttributes = UICollectionViewLayoutAttributes(forCellWithIndexPath: indexPath)
+        let layoutAttributes = UICollectionViewLayoutAttributes(forCellWith: indexPath)
         
         // Set initial frame - align the page's edge to the spine
-        var frame = getFrame(collectionView!)
+        let frame = getFrame(collectionView!)
         layoutAttributes.frame = frame
         
         // Calculate ratio.
@@ -61,7 +60,7 @@ class BookLayout: UICollectionViewLayout {
         //     0.0: 90' angle. The page is vertical to the table, 90' angle
         //    -0.5: 45' angle.
         //    -1.0:  0' angle. The page is turned left, parallel to the table
-        var ratio = getRatio(collectionView!, indexPath: indexPath)
+        let ratio = getRatio(collectionView!, indexPath: indexPath)
         
         // Filter pages beyond the given threshold
         if ratio < -1 || 1 < ratio  {
@@ -81,7 +80,7 @@ class BookLayout: UICollectionViewLayout {
         }
         
         // Apply rotation transform
-        var rotation = getRotation(indexPath, ratio: min(max(ratio, -1), 1))
+        let rotation = getRotation(indexPath, ratio: min(max(ratio, -1), 1))
         layoutAttributes.transform3D = rotation
         
         // Set z-index
@@ -97,18 +96,18 @@ class BookLayout: UICollectionViewLayout {
     
     // MARK: Helpers
     
-    func getFrame(collectionView: UICollectionView) -> CGRect {
+    func getFrame(_ collectionView: UICollectionView) -> CGRect {
         var frame = CGRect()
         
         frame.origin.x = collectionView.bounds.width / 2 - PageWidth / 2 + collectionView.contentOffset.x
-        frame.origin.y = (collectionViewContentSize().height - PageHeight) / 2
+        frame.origin.y = (collectionViewContentSize.height - PageHeight) / 2
         frame.size.width = PageWidth
         frame.size.height = PageHeight
         
         return frame
     }
     
-    func getRatio(collectionView: UICollectionView, indexPath: NSIndexPath) -> CGFloat {
+    func getRatio(_ collectionView: UICollectionView, indexPath: IndexPath) -> CGFloat {
         let page = CGFloat(indexPath.item - indexPath.item % 2)
         var ratio: CGFloat = -0.5 + 0.5 * page - collectionView.contentOffset.x / collectionView.bounds.width
         
@@ -123,7 +122,7 @@ class BookLayout: UICollectionViewLayout {
         return ratio
     }
     
-    func getRotation(indexPath: NSIndexPath, ratio: CGFloat) -> CATransform3D {
+    func getRotation(_ indexPath: IndexPath, ratio: CGFloat) -> CATransform3D {
         var transform = makePerspectiveTransform()
         
         // Set rotation
@@ -131,7 +130,7 @@ class BookLayout: UICollectionViewLayout {
         
         if indexPath.item % 2 == 0 {
             // The book's spine is on the left of the page
-            angle = (1-ratio) * CGFloat(-M_PI_2)
+            angle = (1-ratio) * CGFloat(-Double.pi/2)
             
             // Make sure the odd and even page don't have the exact same angle
             angle += CGFloat(indexPath.row % 2) / 1000
@@ -139,7 +138,7 @@ class BookLayout: UICollectionViewLayout {
         
         if indexPath.item % 2 == 1 {
             // The book's spine is on the right of the page
-            angle = CGFloat(M_PI_2) + ratio * CGFloat(M_PI_2)
+            angle = CGFloat(Double.pi/2) + ratio * CGFloat(Double.pi/2)
             
             // Make sure the odd and even page don't have the exact same angle
             angle += CGFloat(indexPath.row % 2) / 1000

@@ -20,14 +20,18 @@ class BookCoverCell: UICollectionViewCell {
     
     var image: UIImage? {
         didSet {
-            var corners: UIRectCorner = .TopRight | .BottomRight
-            imageView.image = image!.imageByScalingAndCroppingForSize(bounds.size).imageWithRoundedCornersSize(20, corners: corners)
+            guard let image = image else { return }
+            let corners: UIRectCorner = [.topRight, .bottomRight]
+            imageView.image = image.imageByScalingAndCroppingForSize(targetSize: bounds.size).imageWithRoundedCornersSize(cornerRadius: 20, corners: corners)
         }
     }
     
     override func awakeFromNib() {
         super.awakeFromNib()
         setupAntialiasing()
+        
+        // Set the anchor point to the right edge (spine of the book)
+        layer.anchorPoint = CGPoint(x: 1, y: 0.5)
     }
     
     func setupAntialiasing() {

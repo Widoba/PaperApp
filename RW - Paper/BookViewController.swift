@@ -28,32 +28,31 @@ class BookViewController: UICollectionViewController {
 
 // MARK: UICollectionViewDataSource
 
-extension BookViewController: UICollectionViewDataSource {
+extension BookViewController {
     
-    override func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
+    override func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
     
-    override func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         if let book = book {
             return book.numberOfPages() + 1
         }
         return 0
     }
     
-    override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        var cell = collectionView .dequeueReusableCellWithReuseIdentifier("BookPageCell", forIndexPath: indexPath) as BookPageCell
+    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BookPageCell", for: indexPath) as! BookPageCell
         
         if indexPath.row == 0 {
             // Cover page
             cell.textLabel.text = nil
             cell.image = book?.coverImage()
         }
-            
         else {
             // Page with index: indexPath.row - 1
             cell.textLabel.text = "\(indexPath.row)"
-            cell.image = book?.pageImage(indexPath.row - 1)
+            cell.image = book?.pageImage(index: indexPath.row - 1)
         }
         
         return cell

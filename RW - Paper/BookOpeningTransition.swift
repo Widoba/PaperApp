@@ -11,10 +11,12 @@ import UIKit
 class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
     
     var isPush = true
+    var interactionController: UIPercentDrivenInteractiveTransition?
+    var toViewBackgroundColor: UIColor?
     
     // MARK: UIViewControllerAnimatedTransitioning
     
-    func transitionDuration(transitionContext: UIViewControllerContextTransitioning) -> NSTimeInterval {
+    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
         if isPush {
             return 1
         } else {
@@ -22,41 +24,41 @@ class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
         }
     }
     
-    func animateTransition(transitionContext: UIViewControllerContextTransitioning) {
-        let container = transitionContext.containerView()
+    func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+        let container = transitionContext.containerView
         
         if isPush {
             // Get view controllers involved int he transition
-            let fromVC = transitionContext.viewControllerForKey(UITransitionContextFromViewControllerKey) as BooksViewController
-            let toVC = transitionContext.viewControllerForKey(UITransitionContextToViewControllerKey) as BookViewController
+            guard let fromVC = transitionContext.viewController(forKey: .from) as? BooksViewController,
+                  let toVC = transitionContext.viewController(forKey: .to) as? BookViewController else { return }
             
             // Add toVC to the container
             container.addSubview(toVC.view)
             
             // Perform transition
-            self.setStartPositionForPush(fromVC, toVC: toVC)
-            UIView.animateWithDuration(self.transitionDuration(transitionContext), delay: 0.0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.7, options: nil, animations: {
-                self.setEndPositionForPush(fromVC, toVC: toVC)
+            self.setStartPositionForPush(fromVC: fromVC, toVC: toVC)
+            UIView.animate(withDuration: self.transitionDuration(using: transitionContext), delay: 0.0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.7, options: [], animations: {
+                self.setEndPositionForPush(fromVC: fromVC, toVC: toVC)
             }, completion: { finished in
-                self.cleanupPush(fromVC, toVC: toVC)
+                self.cleanupPush(fromVC: fromVC, toVC: toVC)
                 transitionContext.completeTransition(finished)
             })
         }
             
         else {
             // Get view controllers involved int he transition
-            let fromVC = transitionContext.viewControllerForKey(UITransitionContextFromViewControllerKey) as BookViewController
-            let toVC = transitionContext.viewControllerForKey(UITransitionContextToViewControllerKey) as BooksViewController
+            guard let fromVC = transitionContext.viewController(forKey: .from) as? BookViewController,
+                  let toVC = transitionContext.viewController(forKey: .to) as? BooksViewController else { return }
             
             // Add toVC to the container
             container.insertSubview(toVC.view, belowSubview: fromVC.view)
             
             // Perform transition
-            setStartPositionForPop(fromVC, toVC: toVC)
-            UIView.animateWithDuration(self.transitionDuration(transitionContext), animations: {
-                self.setEndPositionForPop(fromVC, toVC: toVC)
+            setStartPositionForPop(fromVC: fromVC, toVC: toVC)
+            UIView.animate(withDuration: self.transitionDuration(using: transitionContext), animations: {
+                self.setEndPositionForPop(fromVC: fromVC, toVC: toVC)
             }, completion: { finished in
-                self.cleanupPop(fromVC, toVC: toVC)
+                self.cleanupPop(fromVC: fromVC, toVC: toVC)
                 transitionContext.completeTransition(finished)
             })
         }
@@ -73,7 +75,7 @@ class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
         fromVC.selectedCell()?.alpha = 0
         
         // Loop through the pages of the book...
-        for cell in toVC.collectionView!.visibleCells() as [BookPageCell] {
+        for cell in toVC.collectionView!.visibleCells as! [BookPageCell] {
             // Save the current transform of the pages. This is the open position
             transforms[cell] = cell.layer.transform
             
@@ -91,7 +93,7 @@ class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
                 // Left page
             else {
                 // Adjust rotation
-                transform = CATransform3DRotate(transform, CGFloat(-M_PI), 0, 1, 0)
+                transform = CATransform3DRotate(transform, CGFloat(-Double.pi), 0, 1, 0)
                 // Shift page to the center
                 transform = CATransform3DTranslate(transform, 0.7 * cell.layer.bounds.width / 2, 0, 0)
                 // Scale down to match the original cover size
@@ -101,7 +103,7 @@ class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
             cell.updateShadowLayer()
             
             // Ignore the shadow of the cover image.
-            if let indexPath = toVC.collectionView?.indexPathForCell(cell) {
+            if let indexPath = toVC.collectionView?.indexPath(for: cell) {
                 if indexPath.row == 0 {
                     cell.shadowLayer.opacity = 0
                 }
@@ -111,12 +113,12 @@ class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
     
     func setEndPositionForPush(fromVC: BooksViewController, toVC: BookViewController) {
         // Fade out all other book covers
-        for cell in fromVC.collectionView!.visibleCells() as [BookCoverCell] {
+        for cell in fromVC.collectionView!.visibleCells as! [BookCoverCell] {
             cell.alpha = 0
         }
         
         // Open the book. Load the previously saved transforms
-        for cell in toVC.collectionView!.visibleCells() as [BookPageCell] {
+        for cell in toVC.collectionView!.visibleCells as! [BookPageCell] {
             cell.layer.transform = transforms[cell]!
             cell.updateShadowLayer(animated: true)
         }
@@ -142,14 +144,14 @@ class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
         let coverCell = toVC.selectedCell()
         
         // Fade in all other book covers
-        for cell in toVC.collectionView!.visibleCells() as [BookCoverCell] {
+        for cell in toVC.collectionView!.visibleCells as! [BookCoverCell] {
             if cell != coverCell {
                 cell.alpha = 1
             }
         }
         
         // Close book
-        for cell in fromVC.collectionView!.visibleCells() as [BookPageCell] {
+        for cell in fromVC.collectionView!.visibleCells as! [BookPageCell] {
             var transform = self.makePerspectiveTransform()
             // Right page
             if cell.layer.anchorPoint.x == 0 {
@@ -163,7 +165,7 @@ class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
             // Left page
             else {
                 // Adjust rotation
-                transform = CATransform3DRotate(transform, CGFloat(-M_PI), 0, 1, 0)
+                transform = CATransform3DRotate(transform, CGFloat(-Double.pi), 0, 1, 0)
                 // Shift page to the center
                 transform = CATransform3DTranslate(transform, 0.7 * cell.layer.bounds.width / 2, 0, 0)
                 // Scale down to match the original cover size
@@ -187,11 +189,6 @@ class BookOpeningTransition: NSObject, UIViewControllerAnimatedTransitioning {
     // MARK: Stored properties
     
     var transforms = [UICollectionViewCell: CATransform3D]()
-    var toViewBackgroundColor: UIColor?
-    
-    // MARK: Interaction Controller
-    
-    var interactionController: UIPercentDrivenInteractiveTransition?
     
     // MARK: Helpers
     
