@@ -14,45 +14,13 @@ class BookLayout: UICollectionViewLayout {
     
     // Dynamic page dimensions based on the device size
     private var pageWidth: CGFloat {
-        let screenWidth = UIScreen.main.bounds.width
-        let screenHeight = UIScreen.main.bounds.height
-        
-        // Determine if we're in portrait or landscape
-        let isPortrait = screenHeight > screenWidth
-        
-        // Original book aspect ratio is 362:568 or approximately 0.637:1
-        let originalAspectRatio: CGFloat = 362.0 / 568.0
-        
-        // Calculate dimensions based on filling the screen while maintaining aspect ratio
-        if isPortrait {
-            // In portrait, use almost full width
-            let maxWidth = screenWidth * 0.95
-            return maxWidth
-        } else {
-            // In landscape, determine width based on height
-            let maxHeight = screenHeight * 0.95
-            return maxHeight * originalAspectRatio
-        }
+        // Use the full screen width
+        return UIScreen.main.bounds.width
     }
     
     private var pageHeight: CGFloat {
-        let screenWidth = UIScreen.main.bounds.width
-        let screenHeight = UIScreen.main.bounds.height
-        
-        // Determine if we're in portrait or landscape
-        let isPortrait = screenHeight > screenWidth
-        
-        // Original book aspect ratio is 362:568 or approximately 0.637:1
-        let originalAspectRatio: CGFloat = 568.0 / 362.0
-        
-        // Calculate dimensions based on filling the screen while maintaining aspect ratio
-        if isPortrait {
-            // In portrait, height is determined by width
-            return pageWidth * originalAspectRatio
-        } else {
-            // In landscape, use almost full height
-            return screenHeight * 0.95
-        }
+        // Use the full screen height
+        return UIScreen.main.bounds.height
     }
     
     override func prepare() {
@@ -140,7 +108,7 @@ class BookLayout: UICollectionViewLayout {
         var frame = CGRect()
         
         frame.origin.x = collectionView.bounds.width / 2 - pageWidth / 2 + collectionView.contentOffset.x
-        frame.origin.y = (collectionViewContentSize.height - pageHeight) / 2
+        frame.origin.y = 0 // Start from the top, no vertical centering
         frame.size.width = pageWidth
         frame.size.height = pageHeight
         
