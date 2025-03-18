@@ -8,12 +8,36 @@
 
 import UIKit
 
-private let PageWidth: CGFloat = 362
-private let PageHeight: CGFloat = 568
-
 class BookLayout: UICollectionViewLayout {
    
     var numberOfItems = 0
+    
+    // Dynamic page dimensions based on the device size
+    private var pageWidth: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width
+        let screenHeight = UIScreen.main.bounds.height
+        let baseSize = min(screenWidth, screenHeight)
+        
+        // For iPad-sized devices, use a ratio that maintains the original look
+        if baseSize >= 768 { // iPad mini or larger
+            return 362
+        } else { // iPhone or smaller iPad
+            return baseSize * 0.6 // 60% of the shorter dimension
+        }
+    }
+    
+    private var pageHeight: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width
+        let screenHeight = UIScreen.main.bounds.height
+        let baseSize = min(screenWidth, screenHeight)
+        
+        // For iPad-sized devices, use a ratio that maintains the original look
+        if baseSize >= 768 { // iPad mini or larger
+            return 568
+        } else { // iPhone or smaller iPad
+            return baseSize * 0.94 // Maintain the aspect ratio (568/362 ≈ 1.57)
+        }
+    }
     
     override func prepare() {
         super.prepare()
@@ -99,10 +123,10 @@ class BookLayout: UICollectionViewLayout {
     func getFrame(_ collectionView: UICollectionView) -> CGRect {
         var frame = CGRect()
         
-        frame.origin.x = collectionView.bounds.width / 2 - PageWidth / 2 + collectionView.contentOffset.x
-        frame.origin.y = (collectionViewContentSize.height - PageHeight) / 2
-        frame.size.width = PageWidth
-        frame.size.height = PageHeight
+        frame.origin.x = collectionView.bounds.width / 2 - pageWidth / 2 + collectionView.contentOffset.x
+        frame.origin.y = (collectionViewContentSize.height - pageHeight) / 2
+        frame.size.width = pageWidth
+        frame.size.height = pageHeight
         
         return frame
     }

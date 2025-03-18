@@ -24,6 +24,28 @@ class BookViewController: UICollectionViewController {
         }
     }
     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Register for orientation change notifications
+        NotificationCenter.default.addObserver(self, selector: #selector(orientationDidChange), name: UIDevice.orientationDidChangeNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // Handle orientation changes
+    @objc func orientationDidChange() {
+        // Force layout update
+        collectionViewLayout.invalidateLayout()
+        collectionView?.reloadData()
+        
+        // Preserve current page position
+        let currentPage = Int(collectionView!.contentOffset.x / collectionView!.bounds.width)
+        let newOffset = CGFloat(currentPage) * collectionView!.bounds.width
+        collectionView?.contentOffset = CGPoint(x: newOffset, y: 0)
+    }
 }
 
 // MARK: UICollectionViewDataSource

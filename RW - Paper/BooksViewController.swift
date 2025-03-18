@@ -31,6 +31,28 @@ class BooksViewController: UICollectionViewController {
         super.viewDidLoad()
         books = BookStore.sharedInstance.loadBooks(plist: "Books")
         recognizer = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        
+        // Register for orientation change notifications
+        NotificationCenter.default.addObserver(self, selector: #selector(orientationDidChange), name: UIDevice.orientationDidChangeNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // Handle orientation changes
+    @objc func orientationDidChange() {
+        // Force layout update
+        collectionViewLayout.invalidateLayout()
+        collectionView?.reloadData()
+        
+        // Make sure we're still centered on the current book
+        if let currentCell = selectedCell() {
+            if let indexPath = collectionView?.indexPath(for: currentCell) {
+                // Scroll to the current book with animation
+                collectionView?.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
+            }
+        }
     }
     
     // MARK: Helpers

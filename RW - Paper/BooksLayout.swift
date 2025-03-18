@@ -8,18 +8,44 @@
 
 import UIKit
 
-private let PageWidth: CGFloat = 362
-private let PageHeight: CGFloat = 568
-
+// Replace fixed values with calculated properties based on device size
 class BooksLayout: UICollectionViewFlowLayout {
     
     var numberOfItems = 0
+    
+    // Dynamic page dimensions based on the device size
+    private var pageWidth: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width
+        let screenHeight = UIScreen.main.bounds.height
+        let baseSize = min(screenWidth, screenHeight)
+        
+        // For iPad-sized devices, use a ratio that maintains the original look
+        if baseSize >= 768 { // iPad mini or larger
+            return 362
+        } else { // iPhone or smaller iPad
+            return baseSize * 0.6 // 60% of the shorter dimension
+        }
+    }
+    
+    private var pageHeight: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width
+        let screenHeight = UIScreen.main.bounds.height
+        let baseSize = min(screenWidth, screenHeight)
+        
+        // For iPad-sized devices, use a ratio that maintains the original look
+        if baseSize >= 768 { // iPad mini or larger
+            return 568
+        } else { // iPhone or smaller iPad
+            return baseSize * 0.94 // Maintain the aspect ratio (568/362 ≈ 1.57)
+        }
+    }
 
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         
         scrollDirection = UICollectionView.ScrollDirection.horizontal
-        itemSize = CGSize(width: PageWidth, height: PageHeight)
+        // Use the dynamic size properties instead of fixed constants
+        itemSize = CGSize(width: pageWidth, height: pageHeight)
         minimumInteritemSpacing = 10
     }
     
@@ -31,9 +57,9 @@ class BooksLayout: UICollectionViewFlowLayout {
         // Make sure the first book is centered.
         collectionView?.contentInset = UIEdgeInsets(
             top: 0,
-            left: collectionView!.bounds.width / 2 - PageWidth / 2,
+            left: collectionView!.bounds.width / 2 - pageWidth / 2,
             bottom: 0,
-            right: collectionView!.bounds.width / 2 - PageWidth / 2
+            right: collectionView!.bounds.width / 2 - pageWidth / 2
         )
         
         numberOfItems = collectionView!.numberOfItems(inSection: 0)
